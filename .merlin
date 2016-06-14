@@ -1,2 +1,4 @@
 S .
+S operations
 B _build
+B _build/**
