@@ -26,3 +26,6 @@ val getPolarity : dagNode -> esp -> polarity
  or raises {!Datatypes.InvalidStrategy} if not found. *)
 val getGameNode : dagNode -> strategy -> dagNode
 
+(** Returns the next available node id *)
+val nextId : unit -> nodeId
+

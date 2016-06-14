@@ -24,3 +24,7 @@ let getPolarity nd esp =
 let getGameNode nd strat =
     (try NodeMap.find nd strat.map
     with Not_found -> raise InvalidStrategy)
+    
+let nextId =
+    let cId = ref (-1) in (* -1: will be incremented on first use. *)
+    (fun () -> incr cId; !cId)
