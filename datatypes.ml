@@ -60,6 +60,10 @@ type esp = {
 
 type game = esp
 
+(** Raised when a function is applied to an ill-formed strategy
+ (eg., the map is not a total map) *)
+exception InvalidStrategy
+
 type strategy = {
     strat : esp ;
     game : game ;
