@@ -15,21 +15,22 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-(** Definition of all pullback operators *)
+(** Definition of all parallel composition operators (|||) *)
 
 open Datatypes
 
-exception MismatchedGames
-
 module type S = sig
-    (** [pullback a b] computes the pullback of [a] and [b].
-     If [a] and [b] are not strategies on the same game,
-     raises {!MismatchedGames}.
-     *)
-    val pullback : strategy -> strategy -> strategy
+    (** [parallelGame a b] computes the game A | B *)
+    val parallelGame : game -> game -> game
+    
+    (** Same as {!parallelGame}, also returning maps from the events of
+     both games to the corresponding events in the parallel game. *)
+    val parallelGame_mapped : game -> game ->
+        game * (dagNode NodeMap.t) * (dagNode NodeMap.t)
+    
+    (** [parallelStrat a b] computes the strategy a | b *)
+    val parallelStrat : strategy -> strategy -> strategy
 end
-
-module BottomUp : S
 
 module Canonical : S
 

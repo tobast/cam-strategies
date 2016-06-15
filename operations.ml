@@ -19,9 +19,19 @@ open Datatypes
 
 module type S = sig
     val (&&&) : strategy -> strategy -> strategy
+    val (|||:) : game -> game -> game
+    val (|||) : strategy -> strategy -> strategy
 end
 
-module Make (Pullback : Pullback.S) = struct
+module Make
+        (Pullback : Pullback.S)
+        (Parallel : Parallel.S)
+= struct
     let (&&&) = Pullback.pullback
+    
+    let (|||:) = Parallel.parallelGame
+    let (|||) = Parallel.parallelStrat
 end
+
+module Canonical = Make(Pullback.Canonical)(Parallel.Canonical)
 

@@ -41,7 +41,18 @@ module type S = sig
     
     (** Pullback of two strategies on the same game. *)
     val (&&&) : strategy -> strategy -> strategy
+    
+    (** Parallel composition of two games *)
+    val (|||:) : game -> game -> game
+    
+    (** Parallel composition of two strategies *)
+    val (|||) : strategy -> strategy -> strategy
 end
 
-module Make (Pullback : Pullback.S) : S
+module Make
+    (Pullback : Pullback.S)
+    (Parallel : Parallel.S)
+    : S
+    
+module Canonical : S
 

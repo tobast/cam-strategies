@@ -27,3 +27,5 @@ module BottomUp = struct
         assert false
 end
 
+module Canonical = BottomUp
+
