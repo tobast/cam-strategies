@@ -31,19 +31,22 @@ debug: $(TARGET_DBG)
 	
 doc: $(DOC)
 	
+.PHONY: buildanyway_
+buildanyway_: ;
+
 %.docdir/index.html: %.odocl
 	$(OCB) $@
 
-%.native: %.ml
+%.native: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 	
-%.byte: %.ml
+%.byte: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 
-%.p.native: %.ml
+%.p.native: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 
-%.d.byte: %.ml
+%.d.byte: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 	
 clean:
