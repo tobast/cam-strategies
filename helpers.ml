@@ -22,7 +22,7 @@ let getPolarity nd esp =
     with Not_found -> raise InvalidStrategy)
     
 let getGameNode nd strat =
-    (try NodeMap.find nd strat.map
+    (try NodeMap.find nd strat.st_map
     with Not_found -> raise InvalidStrategy)
     
 let nextId =

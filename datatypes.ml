@@ -65,10 +65,10 @@ type game = esp
 exception InvalidStrategy
 
 type strategy = {
-    strat : esp ;
-    game : game ;
+    st_strat : esp ;
+    st_game : game ;
     
     (** Maps a node of the strategy to a node of the game *)
-    map : dagNode NodeMap.t
+    st_map : dagNode NodeMap.t
 }
 

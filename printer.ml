@@ -34,8 +34,9 @@ let dotOfVert fmt labOverride dagNode polarity =
 let dotOfStrategy fmt strat =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
-                (getGameNode nd strat).nodeName nd (getPolarity nd strat.strat)
-            ) strat.strat.evts
+                (getGameNode nd strat).nodeName nd
+                (getPolarity nd strat.st_strat)
+            ) strat.st_strat.evts
     in
     
     let dotedges () =
@@ -43,7 +44,7 @@ let dotOfStrategy fmt strat =
             List.iter (fun edge ->
                 Format.fprintf fmt "%d -> %d@."
                 edge.edgeSrc.nodeId edge.edgeDst.nodeId)
-            nd.nodeOutEdges) strat.strat.evts
+            nd.nodeOutEdges) strat.st_strat.evts
     in
     
     Format.fprintf fmt "digraph {@." ;

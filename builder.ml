@@ -17,14 +17,16 @@
 
 open Datatypes
 
-let esp_empty = { evts = NodeSet.empty ; pol = NodeMap.empty }
-
 let newNode name = {
         nodeId = Helpers.nextId () ;
         nodeName = name ;
         nodeInEdges = [] ;
         nodeOutEdges = []
     }
+
+(******** ESP *************************************************************)
+
+let esp_empty = { evts = NodeSet.empty ; pol = NodeMap.empty }
 
 let esp_addNamedEvent name pol esp =
     let nNode = newNode name in
@@ -52,4 +54,31 @@ let esp_addEdge n1 n2 =
     let edge = { edgeSrc = n1; edgeDst = n2 } in
     n1.nodeOutEdges <- edge::n1.nodeOutEdges ;
     n2.nodeInEdges <- edge::n2.nodeInEdges
+    
+(******** Strategy ********************************************************)
+
+let strat_new game = {
+    st_strat = esp_empty ;
+    st_game = game ;
+    st_map = NodeMap.empty }
+
+let strat_addEvent evt strat =
+    (*TODO check that the node is part of this game *)
+    let nNode = newNode "" in
+    let nStrat = {
+            evts = NodeSet.add nNode strat.st_strat.evts ;
+            pol = NodeMap.add nNode
+                (Helpers.getPolarity evt strat.st_game) strat.st_strat.pol
+        } in
+    nNode, { strat with
+        st_strat = nStrat ;
+        st_map = NodeMap.add nNode evt strat.st_map
+    }
+
+let strat_addEvents nEvts strat =
+    List.fold_left (fun (cOut, cStrat) evt ->
+        let nEvt,nStrat = strat_addEvent evt cStrat in
+        nEvt :: cOut, nStrat) ([],strat) nEvts
+        
+let strat_addEdge = esp_addEdge
 

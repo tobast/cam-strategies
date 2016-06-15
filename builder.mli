@@ -17,7 +17,7 @@
 
 (**
     A set of functions to build a game/strategy (events from list, add
-    edges, ...
+    edges, ...)
 *)
 
 open Datatypes
@@ -48,4 +48,18 @@ val esp_addNamedEvents : string list -> polarity -> esp ->
 
 (** [esp_addEdge n1 n2] Adds an edge from [n1] to [n2]. *)
 val esp_addEdge : dagNode -> dagNode -> unit
+
+(** {6 Strategies} *)
+
+(** Creates a new empty strategy on the given game. *)
+val strat_new : game -> strategy
+
+(** Adds a node from the game to the strategy. *)
+val strat_addEvent : dagNode -> strategy -> dagNode * strategy
+
+(** Adds a list of nodes from the game to the strategy. *)
+val strat_addEvents : dagNode list -> strategy -> dagNode list * strategy
+
+(** Adds an edge between two events of the strategy *)
+val strat_addEdge : dagNode -> dagNode -> unit
 
