@@ -29,3 +29,9 @@ val getGameNode : dagNode -> strategy -> dagNode
 (** Returns the next available node id *)
 val nextId : unit -> nodeId
 
+(** [map2 f1 f2 (x,y)] returns [(f1 x, f2 y)] *)
+val map2 : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
+
+(** Identity function. *)
+val id : 'a -> 'a
+

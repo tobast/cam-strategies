@@ -45,6 +45,7 @@ let esp_addEvents n pol esp =
     doAdd [] esp n
 
 let esp_addNamedEvents names pol esp =
+    Helpers.map2 List.rev Helpers.id @@
     List.fold_left (fun (cLst,cEsp) name ->
         let nNode,nEsp = esp_addNamedEvent name pol cEsp in
         ((name,nNode)::cLst),nEsp) ([],esp) names
@@ -62,9 +63,9 @@ let strat_new game = {
     st_game = game ;
     st_map = NodeMap.empty }
 
-let strat_addEvent evt strat =
+let strat_addNamedEvent name evt strat =
     (*TODO check that the node is part of this game *)
-    let nNode = newNode "" in
+    let nNode = newNode name in
     let nStrat = {
             evts = NodeSet.add nNode strat.st_strat.evts ;
             pol = NodeMap.add nNode
@@ -74,11 +75,19 @@ let strat_addEvent evt strat =
         st_strat = nStrat ;
         st_map = NodeMap.add nNode evt strat.st_map
     }
+    
+let strat_addEvent = strat_addNamedEvent ""
 
+let strat_addNamedEvents nEvts strat =
+    Helpers.map2 List.rev Helpers.id @@
+    List.fold_left (fun (cOut, cStrat) (evtName,evt) ->
+        let nEvt,nStrat = strat_addNamedEvent evtName evt cStrat in
+        (evtName,nEvt) :: cOut, nStrat) ([],strat) nEvts
+        
 let strat_addEvents nEvts strat =
-    List.fold_left (fun (cOut, cStrat) evt ->
-        let nEvt,nStrat = strat_addEvent evt cStrat in
-        nEvt :: cOut, nStrat) ([],strat) nEvts
+    let lst,nStrat = strat_addNamedEvents
+        (List.map (fun x -> ("",x)) nEvts) strat in
+    (List.map (fun (_,nd) -> nd) lst),nStrat
         
 let strat_addEdge = esp_addEdge
 

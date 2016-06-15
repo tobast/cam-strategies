@@ -60,6 +60,15 @@ val strat_addEvent : dagNode -> strategy -> dagNode * strategy
 (** Adds a list of nodes from the game to the strategy. *)
 val strat_addEvents : dagNode list -> strategy -> dagNode list * strategy
 
+(** Adds a named node from the game to the strategy. Note that the name
+ is purely for ease of use: it will never be used. *)
+val strat_addNamedEvent : string -> dagNode -> strategy -> dagNode * strategy
+
+(** Adds a list of named nodes from the game to the strategy.
+ See {!strat_addNamedEvent}. *)
+val strat_addNamedEvents : (string*dagNode) list -> strategy ->
+    (string*dagNode) list * strategy
+
 (** Adds an edge between two events of the strategy *)
 val strat_addEdge : dagNode -> dagNode -> unit
 

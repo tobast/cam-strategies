@@ -28,3 +28,8 @@ let getGameNode nd strat =
 let nextId =
     let cId = ref (-1) in (* -1: will be incremented on first use. *)
     (fun () -> incr cId; !cId)
+    
+let map2 f1 f2 (x,y) =
+    f1 x, f2 y
+let id x = x
+
