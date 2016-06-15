@@ -18,6 +18,8 @@
 
 (** Defines the data types that will be used to represent strategies. *)
 
+module SMap = Map.Make(String)
+
 (** {6 DAG datatypes } *)
 
 (** Unique node identifier session-wide (ie. two nodes, even from different
