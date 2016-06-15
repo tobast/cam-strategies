@@ -24,9 +24,39 @@ let newNode name = {
         nodeOutEdges = []
     }
 
+let mappedNode ndMap nd =
+    (try NodeMap.find nd ndMap
+    with Not_found -> nd)
+let mapEdgeNodes ndMap edge =
+    {
+        edgeSrc = mappedNode ndMap edge.edgeSrc ;
+        edgeDst = mappedNode ndMap edge.edgeDst
+    }
+let remapNode ndMap nd =
+    nd.nodeInEdges <- List.map (mapEdgeNodes ndMap) nd.nodeInEdges ;
+    nd.nodeOutEdges <- List.map (mapEdgeNodes ndMap) nd.nodeOutEdges
+
+(** Copies a node. NOTE: the edges' other ends are left alike! *)
+let copyNode nd =
+    let nNd = newNode nd.nodeName in
+    remapNode (NodeMap.singleton nd nNd) nNd ;
+    nNd
+
 (******** ESP *************************************************************)
 
 let esp_empty = { evts = NodeSet.empty ; pol = NodeMap.empty }
+
+let esp_copy_mapped esp =
+    let remap = NodeSet.fold (fun nd cur ->
+        NodeMap.add nd (copyNode nd) cur) esp.evts NodeMap.empty in
+    NodeMap.iter (fun _ nNd -> remapNode remap nNd) remap ;
+    let nEvts = NodeMap.fold (fun _ nNd cur -> NodeSet.add nNd cur)
+        remap NodeSet.empty in
+    let pol = NodeMap.fold (fun nd pol cur ->
+        NodeMap.add (mappedNode remap nd) pol cur) esp.pol NodeMap.empty in
+    { evts = nEvts; pol = pol }, remap
+    
+let esp_copy esp = fst @@ esp_copy_mapped esp
 
 let esp_addNamedEvent name pol esp =
     let nNode = newNode name in
@@ -57,6 +87,18 @@ let esp_addEdge n1 n2 =
     n2.nodeInEdges <- edge::n2.nodeInEdges
     
 (******** Strategy ********************************************************)
+    
+let strat_copy strat =
+    let nGame,gameMap = esp_copy_mapped strat.st_game in
+    let nStrat,stratMap = esp_copy_mapped strat.st_strat in
+    let map = NodeMap.fold (fun fromNd toNd cur -> NodeMap.add
+            (mappedNode stratMap fromNd) (mappedNode gameMap toNd) cur)
+        strat.st_map NodeMap.empty in
+    {
+        st_strat = nStrat ;
+        st_game = nGame ;
+        st_map = map
+    }
 
 let strat_new game = {
     st_strat = esp_empty ;

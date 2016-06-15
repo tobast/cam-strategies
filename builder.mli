@@ -26,6 +26,13 @@ open Datatypes
 
 val esp_empty : esp
 
+(** Copies an ESP or a game (creates new nodes), also returning a map
+ of correspondance between the old and new nodes. *)
+val esp_copy_mapped : esp -> esp * dagNode NodeMap.t
+
+(** Copies an ESP or a game (creates new nodes). *)
+val esp_copy : esp -> esp
+
 (** {7 Nodes} *)
 
 (** [esp_addEvent pol esp] adds a new event of polarity [pol] to [esp],
@@ -49,7 +56,11 @@ val esp_addNamedEvents : string list -> polarity -> esp ->
 (** [esp_addEdge n1 n2] Adds an edge from [n1] to [n2]. *)
 val esp_addEdge : dagNode -> dagNode -> unit
 
+(*********************************************)
 (** {6 Strategies} *)
+
+(** Copies a strategy (creates new nodes). *)
+val strat_copy : strategy -> strategy
 
 (** Creates a new empty strategy on the given game. *)
 val strat_new : game -> strategy
