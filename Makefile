@@ -6,6 +6,7 @@ OCBFLAGS=
 
 TARGET=main.native
 TARGET_DBG=main.d.byte
+TARGET_BYTE=main.byte
 DOCDIR=doc.docdir
 BUILD=_build/
 
@@ -15,9 +16,10 @@ OBJS=\
 	$(BUILD)builder.cmo \
 	$(BUILD)printer.cmo \
 	$(BUILD)operations/pullback.cmo \
+	$(BUILD)operations/parallel.cmo \
 	$(BUILD)operations.cmo
 
-TL_OPENED_MODULES=Helpers,Datatypes,Builder,Printer,Operations
+TL_OPENED_MODULES=Helpers,Datatypes,Builder,Printer,Operations,Canonical
 
 ###############################################################################
 
