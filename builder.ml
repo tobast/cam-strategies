@@ -91,14 +91,13 @@ let esp_addEdge n1 n2 =
 (******** Strategy ********************************************************)
     
 let strat_copy strat =
-    let nGame,gameMap = esp_copy_mapped strat.st_game in
     let nStrat,stratMap = esp_copy_mapped strat.st_strat in
     let map = NodeMap.fold (fun fromNd toNd cur -> NodeMap.add
-            (mappedNode stratMap fromNd) (mappedNode gameMap toNd) cur)
+            (mappedNode stratMap fromNd) toNd cur)
         strat.st_map NodeMap.empty in
     {
         st_strat = nStrat ;
-        st_game = nGame ;
+        st_game = strat.st_game ;
         st_map = map
     }
 
