@@ -17,15 +17,21 @@ OBJS=\
 	$(BUILD)printer.cmo \
 	$(BUILD)operations/pullback.cmo \
 	$(BUILD)operations/parallel.cmo \
-	$(BUILD)operations.cmo
+	$(BUILD)operations.cmo \
+	$(BUILD)lang/stratlangLexer.cmo \
+	$(BUILD)lang/stratlangParser.cmo \
+	$(BUILD)lang/langReader.cmo
 
-TL_OPENED_MODULES=Helpers,Datatypes,Builder,Printer,Operations,Canonical
+TL_OPENED_MODULES=Helpers Datatypes Builder Printer Operations Canonical \
+	LangReader
+
+INCLUDEDIRS= . operations lang
 
 ###############################################################################
 
 DOC=$(DOCDIR)/index.html
-comma= ,
-TL_OPEN_CMD=-open $(subst $(comma), -open ,$(TL_OPENED_MODULES))
+TL_OPEN_CMD= $(patsubst %,-open %,$(TL_OPENED_MODULES))
+TL_INCLUDE_CMD= $(patsubst %,-I $(BUILD)%,$(INCLUDEDIRS))
 
 all: $(TARGET) $(TARGET_BYTE) doc
 	
@@ -58,4 +64,4 @@ cleandoc:
 	rm -rf _build/$(DOCDIR)
 	
 toplevel: $(TARGET_BYTE)
-	$(OCAML) -I $(BUILD) -I $(BUILD)operations/ $(TL_OPEN_CMD) $(OBJS)
+	$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(OBJS)

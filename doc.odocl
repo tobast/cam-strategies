@@ -5,3 +5,6 @@ Operations
 Pullback
 Builder
 Parallel
+StratlangParser
+StratlangLexer
+LangReader

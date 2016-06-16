@@ -1,6 +1,6 @@
 {
     open Lexing
-    open Parser
+    open StratlangParser
     
     exception LexicalError of string
     
@@ -30,7 +30,8 @@ rule token = parse
 | "/*"                      { multilineComment lexbuf }
 | alphanum* as ident        { Tident(ident) }
 | eof                       { Teof }
-| _ as c                    { lexicalError ("Illegal character: '"^c^"'") }
+| _ as c                    { lexicalError ("Illegal character: '"^
+                                    (String.make 1 c)^"'") }
 
 and multilineComment = parse
 | "*/"                      { token lexbuf }
