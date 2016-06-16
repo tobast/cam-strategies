@@ -1,0 +1,10 @@
+coin (coin)
+getCoffee (getCoffee)
+getTea (getTea)
+coffee (coffee)
+tea (tea)
+
+coin -> coffee
+coin -> tea
+getCoffee -> coffee
+getTea -> tea
