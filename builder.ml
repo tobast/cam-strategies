@@ -39,6 +39,8 @@ let remapNode ndMap nd =
 (** Copies a node. NOTE: the edges' other ends are left alike! *)
 let copyNode nd =
     let nNd = newNode nd.nodeName in
+    nNd.nodeInEdges <- nd.nodeInEdges ;
+    nNd.nodeOutEdges <- nd.nodeOutEdges ;
     remapNode (NodeMap.singleton nd nNd) nNd ;
     nNd
 
