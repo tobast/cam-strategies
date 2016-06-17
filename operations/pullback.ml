@@ -55,7 +55,7 @@ module BottomUp = struct
         and invmap2 = invertedMapping cs2 in
         
         (* Sets of dependancy: which events the given event depends on? *)
-        let depSets = NodeSet.fold (fun evt cur ->
+        let origDepSets = NodeSet.fold (fun evt cur ->
                 NodeMap.add evt (List.fold_left (fun cSet cEdge ->
                     NodeSet.add cEdge.edgeSrc cSet)
                     NodeSet.empty evt.nodeInEdges) cur)
@@ -72,7 +72,7 @@ module BottomUp = struct
         in
         
         let worklist = NodeSet.fold (fun gEvt cur ->
-            if not @@ hasAnyDeps depSets gEvt
+            if not @@ hasAnyDeps origDepSets gEvt
                 then gEvt :: cur
                 else cur) game.evts [] in
         
@@ -102,7 +102,8 @@ module BottomUp = struct
             let evtDeps = NodeSet.fold (fun evt cur ->
                     NodeSet.add (NodeMap.find evt pbNodesMap) cur)
                 (NodeSet.union
-                    (NodeMap.find sEv1 depSets) (NodeMap.find sEv2 depSets))
+                    (NodeMap.find sEv1 origDepSets)
+                    (NodeMap.find sEv2 origDepSets))
                 NodeSet.empty
             in
             
@@ -124,7 +125,8 @@ module BottomUp = struct
             buildPullback nPbMap nDepSets nPb nWorklist
         in
         
-        buildPullback NodeMap.empty depSets (Builder.strat_new game) worklist
+        buildPullback NodeMap.empty origDepSets
+            (Builder.strat_new game) worklist
 end
 
 module Canonical = BottomUp
