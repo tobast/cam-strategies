@@ -37,10 +37,16 @@ module type S = sig
     a [:] (if it makes sense to have one).
     *)
     
+    (** {6 Perp} *)
+    
+    val perp : game -> game
+    
     (** {6 Pullback} *)
     
     (** Pullback of two strategies on the same game. *)
     val (&&&) : strategy -> strategy -> strategy
+    
+    (** {6 Parallel composition} *)
     
     (** Parallel composition of two games *)
     val (|||:) : game -> game -> game

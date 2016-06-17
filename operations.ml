@@ -18,6 +18,7 @@
 open Datatypes
 
 module type S = sig
+    val perp : game -> game
     val (&&&) : strategy -> strategy -> strategy
     val (|||:) : game -> game -> game
     val (|||) : strategy -> strategy -> strategy
@@ -27,6 +28,14 @@ module Make
         (Pullback : Pullback.S)
         (Parallel : Parallel.S)
 = struct
+    let perp game =
+        let oppPol = function
+        | PolPos -> PolNeg
+        | PolNeg -> PolPos
+        | PolNeutral -> PolNeutral in
+        let nGame = Builder.esp_copy game in
+        { nGame with pol = NodeMap.map oppPol nGame.pol }
+        
     let (&&&) = Pullback.pullback
     
     let (|||:) = Parallel.parallelGame
