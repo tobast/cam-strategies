@@ -61,10 +61,10 @@ module BottomUp = struct
                     NodeSet.empty evt.nodeInEdges) cur)
             eventsSet NodeMap.empty in
         
-        let hasDeps depsSet invmap evt =
+        let hasDeps dependancies invmap evt =
             (try
                 let sEvt = NodeMap.find evt invmap in
-                not @@ NodeSet.is_empty @@ NodeMap.find sEvt depSets
+                not @@ NodeSet.is_empty @@ NodeMap.find sEvt dependancies
             with Not_found -> true)
         in
         let hasAnyDeps depSets gEvt =
