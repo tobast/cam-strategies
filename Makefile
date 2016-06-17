@@ -42,7 +42,7 @@ doc: $(DOC)
 .PHONY: buildanyway_
 buildanyway_: ;
 
-%.docdir/index.html: %.odocl
+%.docdir/index.html: %.odocl buildanyway_
 	$(OCB) $@
 
 %.native: %.ml buildanyway_
