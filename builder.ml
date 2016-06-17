@@ -101,27 +101,34 @@ let game_unparallelize game =
     else
         { g_esp = esp_copy game.g_esp ; g_parallel = array_empty }
         
+let game_selfParallel game =
+    if Array.length game.g_parallel = 0
+        then { game with g_parallel = [| game |] }
+        else game
+        
 let mapRight fct (x,y) = x, fct y
 let replRightEsp game pair =
     mapRight (fun e -> { game with g_esp = e }) pair
 
 let game_parallel g1 g2 =
-    (*TODO HANDLE THE CASES when g1 or g2 is NOT a composed game *)
-    let nParallel = Array.append g1.g_parallel g2.g_parallel in
-    let offset = Array.length g1.g_parallel in
+    let pg1 = game_selfParallel g1
+    and pg2 = game_selfParallel g2 in
+    
+    let nParallel = Array.append pg1.g_parallel pg2.g_parallel in
+    let offset = Array.length pg1.g_parallel in
     let remapG2 = NodeSet.fold (fun evt cur ->
             let compId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
             NodeMap.add evt { evt with
                 nodeId = CompId(compId + offset, ndId) } cur)
-        g2.g_esp.evts NodeMap.empty in
+        pg2.g_esp.evts NodeMap.empty in
     
     let nEvts = NodeSet.fold (fun evt cur ->
             let nEvt = NodeMap.find evt remapG2 in
             remapNode remapG2 nEvt ;
-            NodeSet.add nEvt cur) g2.g_esp.evts NodeSet.empty in
+            NodeSet.add nEvt cur) pg2.g_esp.evts NodeSet.empty in
     let nPols = NodeMap.fold (fun evt pol cur ->
             NodeMap.add (NodeMap.find evt remapG2) pol cur)
-        g2.g_esp.pol NodeMap.empty in
+        pg2.g_esp.pol NodeMap.empty in
     let nEsp = { evts = nEvts ; pol = nPols } in
     
     { g_esp = nEsp ; g_parallel = nParallel }
