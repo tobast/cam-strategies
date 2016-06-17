@@ -62,6 +62,9 @@ val esp_addEdge : dagNode -> dagNode -> unit
 (** Copies a strategy (creates new nodes). *)
 val strat_copy : strategy -> strategy
 
+(** The identity strategy on the given game. *)
+val strat_id : game -> strategy
+
 (** Creates a new empty strategy on the given game. *)
 val strat_new : game -> strategy
 

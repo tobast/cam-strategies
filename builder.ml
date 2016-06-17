@@ -90,6 +90,7 @@ let esp_addEdge n1 n2 =
     
 (******** Strategy ********************************************************)
     
+    
 let strat_copy strat =
     let nStrat,stratMap = esp_copy_mapped strat.st_strat in
     let map = NodeMap.fold (fun fromNd toNd cur -> NodeMap.add
@@ -105,6 +106,16 @@ let strat_new game = {
     st_strat = esp_empty ;
     st_game = game ;
     st_map = NodeMap.empty }
+
+let strat_id game =
+    let strat = strat_new game in
+    let stratSt, stratIMap = esp_copy_mapped game in
+    let stratMap = NodeMap.fold (fun gEvt sEvt cur ->
+        NodeMap.add sEvt gEvt cur) stratIMap NodeMap.empty in
+    { strat with
+        st_strat = stratSt ;
+        st_map = stratMap
+    }
 
 let strat_addNamedEvent name evt strat =
     (*TODO check that the node is part of this game *)
