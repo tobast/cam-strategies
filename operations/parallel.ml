@@ -32,11 +32,7 @@ module Canonical = struct
     let parallelGame_mapped g1 g2 =
         let cg1,m1 = Builder.esp_copy_mapped g1 in
         let cg2,m2 = Builder.esp_copy_mapped g2 in
-        let pol = NodeMap.merge (fun key v1 v2 -> match v1,v2 with
-            | None,Some p | Some p, None -> Some p
-            | None,None -> None
-            | Some _, Some _ -> failwith "Node appearing on both sides?!")
-            cg1.pol cg2.pol in
+        let pol = NodeMap.merge Helpers.mapMerger cg1.pol cg2.pol in
         {
             evts = NodeSet.union cg1.evts cg2.evts ;
             pol = pol

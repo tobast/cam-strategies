@@ -24,7 +24,11 @@ module SMap = Map.Make(String)
 
 (** Unique node identifier session-wide (ie. two nodes, even from different
  DAGs, will not have the same nodeId). *)
-type nodeId = int
+type baseNodeId = int
+
+(** Node id allowing to keep track of games composition and its
+ associativity. *)
+type nodeId = CompId of int * baseNodeId
 
 (** Node in a DAG. The name is only used for display purposes. *)
 type dagNode = {
@@ -60,7 +64,10 @@ type esp = {
     pol : polarity NodeMap.t
 }
 
-type game = esp
+type game = {
+    g_esp : esp ;
+    g_parallel : game array
+}
 
 (** Raised when a function is applied to an ill-formed strategy
  (eg., the map is not a total map) *)

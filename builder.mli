@@ -22,15 +22,19 @@
 
 open Datatypes
 
-(** {6 ESPs (aka. games)} *)
+(** {6 ESPs} *)
 
 val esp_empty : esp
 
-(** Copies an ESP or a game (creates new nodes), also returning a map
- of correspondance between the old and new nodes. *)
+(** Copies an ESP (creates new nodes), also returning a map
+ of correspondance between the old and new nodes.
+ 
+ WARNING: does not preserve {!Datatypes.CompId}s well! *)
 val esp_copy_mapped : esp -> esp * dagNode NodeMap.t
 
-(** Copies an ESP or a game (creates new nodes). *)
+(** Copies an ESP (creates new nodes).
+ 
+ WARNING: does not preserve {!Datatypes.CompId}s well! *)
 val esp_copy : esp -> esp
 
 (** {7 Nodes} *)
@@ -55,6 +59,38 @@ val esp_addNamedEvents : string list -> polarity -> esp ->
 
 (** [esp_addEdge n1 n2] Adds an edge from [n1] to [n2]. *)
 val esp_addEdge : dagNode -> dagNode -> unit
+
+(********************************************)
+(** {6 Games} *)
+
+(** See {!esp_empty}. *)
+val game_empty : game
+
+(** Copies a parallel game A0 || ... || An to the same game,
+ abstracted from its parallel composition. *)
+val game_unparallelize : game -> game
+
+(** See {!esp_copy_mapped}. Preserves parallel composition. *)
+val game_copy_mapped : game -> game * dagNode NodeMap.t
+
+(** See {!esp_copy}. Preserves parallel composition. *)
+val game_copy : game -> game
+
+(** See {!esp_addEvent}. *)
+val game_addEvent : polarity -> game -> dagNode * game
+
+(** See {!esp_addNamedEvent}. *)
+val game_addNamedEvent : string -> polarity -> game -> dagNode * game
+
+(** See {!esp_addEvents}. *)
+val game_addEvents : int -> polarity -> game -> dagNode list * game
+
+(** See {!esp_addNamedEvents}. *)
+val game_addNamedEvents : string list -> polarity -> game ->
+    (string*dagNode) list * game
+
+(** See {!esp_addEdge}. *)
+val game_addEdge : dagNode -> dagNode -> unit
 
 (*********************************************)
 (** {6 Strategies} *)

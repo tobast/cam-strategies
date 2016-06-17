@@ -27,11 +27,17 @@ val getPolarity : dagNode -> esp -> polarity
 val getGameNode : dagNode -> strategy -> dagNode
 
 (** Returns the next available node id *)
-val nextId : unit -> nodeId
+val nextId : unit -> baseNodeId
 
 (** [map2 f1 f2 (x,y)] returns [(f1 x, f2 y)] *)
 val map2 : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
 
 (** Identity function. *)
 val id : 'a -> 'a
+
+(** Array.fold_left, also passing the current element index to the function. *)
+val array_fold_left_i : (int -> 'a -> 'b -> 'a) -> 'a -> 'b array -> 'a
+
+exception MergeConflict
+val mapMerger : 'b -> 'a option -> 'a option -> 'a option
 

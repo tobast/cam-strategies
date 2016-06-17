@@ -33,3 +33,17 @@ let map2 f1 f2 (x,y) =
     f1 x, f2 y
 let id x = x
 
+let array_fold_left_i recursor base arr =
+    let rec fold i cur len =
+        if i = len then
+            cur
+        else
+            fold (i+1) (recursor i cur (arr.(i))) len
+    in fold 0 base (Array.length arr)
+
+exception MergeConflict
+let mapMerger _ x y = match (x,y) with
+| Some a, Some b -> raise MergeConflict
+| None, Some x | Some x, None -> Some x
+| None,None -> None
+
