@@ -27,6 +27,7 @@ end
 module Make
         (Pullback : Pullback.S)
         (Parallel : Parallel.S)
+        (Compose : Composition.S)
 = struct
     let perp game =
         let oppPol = function
@@ -42,7 +43,14 @@ module Make
     
     let (|||:) = Parallel.parallelGame
     let (|||) = Parallel.parallelStrat
+    
+    let ( *** ) = Compose.compInteraction
+    let ( @@@ ) = Compose.compHidden
 end
 
-module Canonical = Make(Pullback.Canonical)(Parallel.Canonical)
+
+module Canonical = Make
+    (Pullback.Canonical)
+    (Parallel.Canonical)
+    (Composition.Canonical (Pullback.Canonical) (Parallel.Canonical))
 

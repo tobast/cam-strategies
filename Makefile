@@ -13,10 +13,12 @@ BUILD=_build/
 OBJS=\
 	$(BUILD)datatypes.cmo \
 	$(BUILD)helpers.cmo \
+	$(BUILD)modExtensions.cmo \
 	$(BUILD)builder.cmo \
 	$(BUILD)printer.cmo \
 	$(BUILD)operations/pullback.cmo \
 	$(BUILD)operations/parallel.cmo \
+	$(BUILD)operations/composition.cmo \
 	$(BUILD)operations.cmo \
 	$(BUILD)lang/stratlangLexer.cmo \
 	$(BUILD)lang/stratlangParser.cmo \

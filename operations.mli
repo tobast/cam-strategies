@@ -58,6 +58,7 @@ end
 module Make
     (Pullback : Pullback.S)
     (Parallel : Parallel.S)
+    (Compose : Composition.S)
     : S
     
 module Canonical : S
