@@ -25,3 +25,6 @@ open Datatypes
 (** Outputs the given strategy, in DOT format, to the given formatter. *)
 val dotOfStrategy : Format.formatter -> strategy -> unit
 
+(** Outputs the given game, in DOT format, to the given formatter. *)
+val dotOfGame : Format.formatter -> game -> unit
+

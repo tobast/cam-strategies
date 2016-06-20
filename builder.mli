@@ -70,6 +70,15 @@ val game_empty : game
  abstracted from its parallel composition. *)
 val game_unparallelize : game -> game
 
+(** Puts in parallel two games, returning maps from both games to the new
+ game's events. Yes, it should belong to Operators, but it causes circular
+ dependancies. *)
+val game_parallel_mapped : game -> game ->
+    game * dagNode NodeMap.t * dagNode NodeMap.t
+
+(** See {!game_parallel_mapped}. *)
+val game_parallel : game -> game -> game
+
 (** See {!esp_copy_mapped}. Preserves parallel composition. *)
 val game_copy_mapped : game -> game * dagNode NodeMap.t
 

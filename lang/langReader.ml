@@ -23,16 +23,6 @@ type annotatedGame = game * dagNode SMap.t
 
 type path = string
 
-(*
-type idt = string
-type tEspEvent = { e_id : idt ; e_name : string option ; e_pol : polarity }
-type tStratEvent = { s_id : idt ; s_name : string option ; s_map : idt }
-
-type tEdge = idt*idt
-
-type tEspDecl = EspEdge of tEdge | EspEvent of tEspEvent
-type tStratDecl = StratEdge of tEdge | StratEvent of tStratEvent
-*)
 exception UndefinedEvent of idt
 
 let extractNode map idt =
@@ -80,7 +70,12 @@ let stratOfDecls (game, gameMap) decls =
 let extractGame = fst
     
 let readAnnotatedGame lexbuf =
-    espOfDecls (StratlangParser.esp StratlangLexer.token lexbuf)
+    let annGame = espOfDecls (StratlangParser.esp StratlangLexer.token lexbuf)
+    in
+    
+    { g_esp = fst annGame ;
+      g_parallel = [| |]
+    }, snd annGame
     
 let readGame lexbuf = extractGame @@ readAnnotatedGame lexbuf
 

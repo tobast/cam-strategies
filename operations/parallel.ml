@@ -21,6 +21,9 @@ module type S = sig
     val parallelGame : game -> game -> game
     val parallelGame_mapped : game -> game ->
         game * (dagNode NodeMap.t) * (dagNode NodeMap.t)
+    val parallelEsp : esp -> esp -> esp
+    val parallelEsp_mapped : esp -> esp ->
+        esp * dagNode NodeMap.t * dagNode NodeMap.t
     val parallelStrat : strategy -> strategy -> strategy
 end
 
@@ -30,21 +33,27 @@ module Canonical = struct
         with Not_found -> nd)
 
     let parallelGame_mapped g1 g2 =
-        let cg1,m1 = Builder.esp_copy_mapped g1 in
-        let cg2,m2 = Builder.esp_copy_mapped g2 in
-        let pol = NodeMap.merge Helpers.mapMerger cg1.pol cg2.pol in
-        {
-            evts = NodeSet.union cg1.evts cg2.evts ;
-            pol = pol
-        },m1,m2
+        Builder.game_parallel_mapped g1 g2
         
     let parallelGame g1 g2 =
         (fun (x,_,_) -> x) @@ parallelGame_mapped g1 g2
+        
+    let parallelEsp_mapped esp1 esp2 =
+        let ce1,m1 = Builder.esp_copy_mapped esp1 in
+        let ce2,m2 = Builder.esp_copy_mapped esp2 in
+        let pol = NodeMap.merge Helpers.mapMerger ce1.pol ce2.pol in
+        {
+            evts = NodeSet.union ce1.evts ce2.evts ;
+            pol = pol
+        },m1,m2
+    
+    let parallelEsp esp1 esp2 = (fun (x,_,_) -> x) @@
+        parallelEsp_mapped esp1 esp2
     
     let parallelStrat s1 s2 =
         let game,gameMap1,gameMap2 = parallelGame_mapped
             s1.st_game s2.st_game in
-        let strat,stratMap1,stratMap2 = parallelGame_mapped
+        let strat,stratMap1,stratMap2 = parallelEsp_mapped
             s1.st_strat s2.st_strat in
         
         let remapMap sMap gMap map = NodeMap.fold (fun key nd cur ->

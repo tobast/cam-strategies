@@ -74,7 +74,7 @@ module BottomUp = struct
         let worklist = NodeSet.fold (fun gEvt cur ->
             if not @@ hasAnyDeps origDepSets gEvt
                 then gEvt :: cur
-                else cur) game.evts [] in
+                else cur) game.g_esp.evts [] in
         
         let rec remDeps strat (deps,newFree) nd = function
         | [] -> deps,newFree

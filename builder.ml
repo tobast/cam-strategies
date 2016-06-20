@@ -110,12 +110,14 @@ let mapRight fct (x,y) = x, fct y
 let replRightEsp game pair =
     mapRight (fun e -> { game with g_esp = e }) pair
 
-let game_parallel g1 g2 =
+let game_parallel_mapped g1 g2 =
     let pg1 = game_selfParallel g1
     and pg2 = game_selfParallel g2 in
     
     let nParallel = Array.append pg1.g_parallel pg2.g_parallel in
     let offset = Array.length pg1.g_parallel in
+    let remapG1 = NodeSet.fold (fun evt cur ->
+            NodeMap.add evt evt cur) pg1.g_esp.evts NodeMap.empty in
     let remapG2 = NodeSet.fold (fun evt cur ->
             let compId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
             NodeMap.add evt { evt with
@@ -131,7 +133,9 @@ let game_parallel g1 g2 =
         pg2.g_esp.pol NodeMap.empty in
     let nEsp = { evts = nEvts ; pol = nPols } in
     
-    { g_esp = nEsp ; g_parallel = nParallel }
+    { g_esp = nEsp ; g_parallel = nParallel }, remapG1, remapG2
+    
+let game_parallel g1 g2 = (fun (x,_,_) -> x) @@ game_parallel_mapped g1 g2
 
 let rec game_copy_mapped game =
     if Array.length game.g_parallel = 0 then

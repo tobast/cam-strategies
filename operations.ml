@@ -33,8 +33,10 @@ module Make
         | PolPos -> PolNeg
         | PolNeg -> PolPos
         | PolNeutral -> PolNeutral in
-        let nGame = Builder.esp_copy game in
-        { nGame with pol = NodeMap.map oppPol nGame.pol }
+        let nGame = Builder.game_copy game in
+        let nEsp = { nGame.g_esp
+            with pol = NodeMap.map oppPol nGame.g_esp.pol } in
+        { nGame with g_esp = nEsp }
         
     let (&&&) = Pullback.pullback
     

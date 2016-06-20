@@ -28,6 +28,13 @@ module type S = sig
     val parallelGame_mapped : game -> game ->
         game * (dagNode NodeMap.t) * (dagNode NodeMap.t)
     
+    (** See {!parallelGame}. *)
+    val parallelEsp : esp -> esp -> esp
+
+    (** See {!parallelGame_mapped}. *)
+    val parallelEsp_mapped : esp -> esp ->
+        esp * dagNode NodeMap.t * dagNode NodeMap.t
+
     (** [parallelStrat a b] computes the strategy a | b *)
     val parallelStrat : strategy -> strategy -> strategy
 end

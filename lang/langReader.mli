@@ -33,10 +33,10 @@ val readAnnotatedGame : Lexing.lexbuf -> annotatedGame
 val readAnnotatedGameFile : path -> annotatedGame
 
 (** Same as {!extractGame} [@@] {!readAnnotatedGame} *)
-val readGame : Lexing.lexbuf -> Datatypes.esp
+val readGame : Lexing.lexbuf -> Datatypes.game
 
 (** Same as {!readGame}, from a file. *)
-val readGameFile : path -> Datatypes.esp
+val readGameFile : path -> Datatypes.game
 
 (** Reads a strategy from the given lexbuf on the given annotated game.
  The annotations must match. *)
