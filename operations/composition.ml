@@ -41,7 +41,8 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
                 (Array.length st2.st_game.g_parallel) false in
             let commonSet, leftSet = Array.fold_left_i
                 (fun i (curCommon, curLeft) subGame ->
-                    if Array.exists (fun x -> x.g_esp = subGame.g_esp)
+                    if Array.exists (fun x ->
+                            Helpers.esp_eventsEquality x.g_esp subGame.g_esp)
                                 st2.st_game.g_parallel then begin
                         inCenter.(i) <- true ;
                         (subGame :: curCommon, curLeft)

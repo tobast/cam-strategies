@@ -26,7 +26,7 @@ module type S = sig
 
     (** [compInteraction s t] computes the composition interaction s * t on
      the game B where s : S -> A || B and t : T -> B || C, and B is the
-     largest game verifying this property. *)
+     largest game verifying this property IGNORING POLARITIES. *)
     val compInteraction : strategy -> strategy -> strategy
     
     (** [compHidden s t] computes the composition with hiding of the

@@ -35,9 +35,14 @@ val map2 : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
 (** Identity function. *)
 val id : 'a -> 'a
 
-(** Array.fold_left, also passing the current element index to the function. *)
-val array_fold_left_i : (int -> 'a -> 'b -> 'a) -> 'a -> 'b array -> 'a
-
 exception MergeConflict
 val mapMerger : 'b -> 'a option -> 'a option -> 'a option
+
+(** Returns [true] iif the two ESPs are equal, without taking polarity into
+ account. *)
+val esp_eventsEquality : esp -> esp -> bool
+
+(** Returns [true] iff the two games are equal. Doesn't mind if they do not
+ agree on polarities. *)
+val gamesEqualityNoPol : game -> game -> bool
 

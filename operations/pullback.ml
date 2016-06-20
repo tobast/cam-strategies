@@ -43,9 +43,19 @@ module BottomUp = struct
         (* Copy: makes it possible to reuse the nodes directly on the pullback
          * and to use them on a map all together. *)
         
-        if s1.st_game <> s2.st_game then
+        if not @@ Helpers.gamesEqualityNoPol s1.st_game s2.st_game then
             raise MismatchedGames;
-        let game = s1.st_game in
+        
+        (* Merge polarity inconsistencies as neutral *)
+        let mergedPols = NodeMap.merge (fun _ x y -> match x,y with
+            | None,None -> None
+            | Some x, None | None, Some x -> Some x
+            | Some x, Some y -> Some PolNeutral)
+            s1.st_game.g_esp.pol s2.st_game.g_esp.pol in
+
+        let game = { s1.st_game with g_esp = { s1.st_game.g_esp with
+                pol = mergedPols
+            } } in
 
         let cs1 = Builder.strat_copy s1
         and cs2 = (* Builder.strat_copy *) s2 in

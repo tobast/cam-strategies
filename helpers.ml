@@ -16,6 +16,7 @@
  *)
 
 open Datatypes
+open ModExtensions
 
 let getPolarity nd esp =
     (try NodeMap.find nd esp.pol
@@ -33,17 +34,21 @@ let map2 f1 f2 (x,y) =
     f1 x, f2 y
 let id x = x
 
-let array_fold_left_i recursor base arr =
-    let rec fold i cur len =
-        if i = len then
-            cur
-        else
-            fold (i+1) (recursor i cur (arr.(i))) len
-    in fold 0 base (Array.length arr)
-
 exception MergeConflict
 let mapMerger _ x y = match (x,y) with
-| Some a, Some b -> raise MergeConflict
+| Some a, Some b -> if a = b then Some a else raise MergeConflict
 | None, Some x | Some x, None -> Some x
 | None,None -> None
+
+let esp_eventsEquality e1 e2 = e1.evts = e2.evts
+
+let rec gamesEqualityNoPol g1 g2 =
+    if Array.length g1.g_parallel <> Array.length g2.g_parallel then
+        false
+    else if Array.length g1.g_parallel = 0 then
+        esp_eventsEquality g1.g_esp g2.g_esp
+    else
+        Array.fold_left_i (fun i cur gm ->
+                cur && (gamesEqualityNoPol gm g2.g_parallel.(i)))
+            true g1.g_parallel
 
