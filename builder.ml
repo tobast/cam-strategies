@@ -127,10 +127,10 @@ let game_parallel_mapped g1 g2 =
     let nEvts = NodeSet.fold (fun evt cur ->
             let nEvt = NodeMap.find evt remapG2 in
             remapNode remapG2 nEvt ;
-            NodeSet.add nEvt cur) pg2.g_esp.evts NodeSet.empty in
+            NodeSet.add nEvt cur) pg2.g_esp.evts pg1.g_esp.evts in
     let nPols = NodeMap.fold (fun evt pol cur ->
             NodeMap.add (NodeMap.find evt remapG2) pol cur)
-        pg2.g_esp.pol NodeMap.empty in
+        pg2.g_esp.pol pg1.g_esp.pol in
     let nEsp = { evts = nEvts ; pol = nPols } in
     
     { g_esp = nEsp ; g_parallel = nParallel }, remapG1, remapG2
