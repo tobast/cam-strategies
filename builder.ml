@@ -231,3 +231,16 @@ let strat_addEvents nEvts strat =
         
 let strat_addEdge = esp_addEdge
 
+let strat_newFilled game =
+    let strat = strat_new game in
+    let evMap, nStrat = NodeSet.fold (fun nd (curMap,curStrat) ->
+        let nEvt,nStrat = strat_addNamedEvent nd.nodeName nd curStrat in
+        NodeMap.add nd nEvt curMap, nStrat
+        ) game.g_esp.evts (NodeMap.empty,strat) in
+    NodeSet.iter (fun nd -> List.iter (fun edge ->
+        let edge = mapEdgeNodes evMap edge in
+        strat_addEdge edge.edgeSrc edge.edgeDst) nd.nodeOutEdges)
+        game.g_esp.evts ;
+
+    nStrat
+

@@ -113,6 +113,10 @@ val strat_id : game -> strategy
 (** Creates a new empty strategy on the given game. *)
 val strat_new : game -> strategy
 
+(** Creates a new strategy on the given game, containing every event and
+    edges of the game. *)
+val strat_newFilled : game -> strategy
+
 (** Adds a node from the game to the strategy. *)
 val strat_addEvent : dagNode -> strategy -> dagNode * strategy
 
