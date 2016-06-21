@@ -20,6 +20,7 @@ open ModExtensions
 
 module type S = sig
     exception NotComposed of game
+    val extractGames : strategy -> strategy -> game list *game list *game list
     val compInteraction : strategy -> strategy -> strategy
     val compHidden : strategy -> strategy -> strategy
 end 
@@ -37,28 +38,31 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
             raise @@ NotComposed st2.st_game
         else
             (* N^2 algorithm, should be fast enough for what we want. *)
-            let inCenter = Array.make
-                (Array.length st2.st_game.g_parallel) false in
+            let inCenter = ref GameSet.empty in
             let commonSet, leftSet = Array.fold_left_i
                 (fun i (curCommon, curLeft) subGame ->
                     if Array.exists (fun x ->
                             Helpers.esp_eventsEquality x.g_esp subGame.g_esp)
                                 st2.st_game.g_parallel then begin
-                        inCenter.(i) <- true ;
+                        inCenter := GameSet.add subGame !inCenter ;
                         (subGame :: curCommon, curLeft)
                     end else
                         (curCommon, subGame :: curLeft)
                 ) ([],[]) st1.st_game.g_parallel in 
             let rightSet = Array.fold_left_i
                 (fun i cur subGame ->
-                    if not inCenter.(i)
+                    if not @@ GameSet.exists
+                            (Helpers.gamesEqualityNoPol subGame) !inCenter
                         then subGame::cur
                         else cur) [] st2.st_game.g_parallel in
             leftSet, commonSet, rightSet
 
-    let gameOfParallels =
-        List.fold_left Parallel.parallelGame Builder.game_empty
-                        
+    let gameOfParallels parallels = match parallels with
+    | [] -> Builder.game_empty
+    | hd::[] -> hd
+    | hd::tl -> (* Where tl <> [] *)
+        List.fold_left Parallel.parallelGame hd tl
+    
     (**
      Same as {!compInteraction}, but also returns the game on which we are
      working (cf {!extractGames}). This is useful for {!compHidden}.
