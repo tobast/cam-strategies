@@ -50,7 +50,10 @@ module BottomUp = struct
         let mergedPols = NodeMap.merge (fun _ x y -> match x,y with
             | None,None -> None
             | Some x, None | None, Some x -> Some x
-            | Some x, Some y -> Some PolNeutral)
+            | Some x, Some y ->
+                    if x = y
+                        then Some x
+                        else Some PolNeutral)
             s1.st_game.g_esp.pol s2.st_game.g_esp.pol in
 
         let game = { s1.st_game with g_esp = { s1.st_game.g_esp with
