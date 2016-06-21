@@ -69,6 +69,14 @@ type game = {
     g_parallel : game array
 }
 
+module Game = struct
+    type t = game
+    let compare = Pervasives.compare
+end
+
+module GameSet = Set.Make(Game)
+module GameMap = Map.Make(Game)
+
 (** Raised when a function is applied to an ill-formed strategy
  (eg., the map is not a total map) *)
 exception InvalidStrategy

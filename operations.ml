@@ -22,6 +22,7 @@ module type S = sig
     val (&&&) : strategy -> strategy -> strategy
     val (|||:) : game -> game -> game
     val (|||) : strategy -> strategy -> strategy
+    val ( *** ) : strategy -> strategy -> strategy
 end
 
 module Make

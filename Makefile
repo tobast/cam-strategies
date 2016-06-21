@@ -64,6 +64,10 @@ clean:
 
 cleandoc:
 	rm -rf _build/$(DOCDIR)
-	
+
+toplevelcmd: $(TARGET_BYTE)
+	@echo '$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(OBJS)'
+
 toplevel: $(TARGET_BYTE)
 	$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(OBJS)
+

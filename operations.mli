@@ -53,6 +53,11 @@ module type S = sig
     
     (** Parallel composition of two strategies *)
     val (|||) : strategy -> strategy -> strategy
+    
+    (** {6 Composition} *)
+    
+    (** Composition interaction (ie. without hiding) of two strategies *)
+    val ( *** ) : strategy -> strategy -> strategy
 end
 
 module Make
