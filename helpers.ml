@@ -51,4 +51,10 @@ let rec gamesEqualityNoPol g1 g2 =
         Array.fold_left_i (fun i cur gm ->
                 cur && (gamesEqualityNoPol gm g2.g_parallel.(i)))
             true g1.g_parallel
+            
+let selfNodeMap elts =
+    NodeSet.fold (fun elt cur -> NodeMap.add elt elt cur) elts NodeMap.empty
+
+let eventsEqual e1 e2 = match e1.nodeId, e2.nodeId with
+    CompId(_,i1), CompId(_,i2) -> i1 = i2
 

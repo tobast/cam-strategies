@@ -48,6 +48,7 @@ let parAB = stratAB ||| rightId and parBC = leftId ||| stratBC
 
 let eq = Helpers.gamesEqualityNoPol
 
-let stratCompo = stratAB *** stratBC
+(*let () = Printer.dotDebugOfStrategy Format.std_formatter (stratAB *** stratBC) *)
+let stratCompo = stratAB @@@ stratBC
     
 let () = Printer.dotDebugOfStrategy Format.std_formatter (stratCompo)

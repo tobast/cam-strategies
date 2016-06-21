@@ -86,12 +86,14 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
             (gameOfParallels rightGames) 
             (gameOfParallels leftGames) in
         let events = NodeSet.filter (fun x ->
-            NodeSet.mem (NodeMap.find x interact.st_map) endGame.g_esp.evts)
+            NodeSet.exists (fun y -> Helpers.eventsEqual y
+                (NodeMap.find x interact.st_map)) endGame.g_esp.evts)
             interact.st_strat.evts in
         let map = NodeMap.filter (fun _ toEvt ->
             NodeSet.mem toEvt endGame.g_esp.evts) interact.st_map in
         let pol = NodeMap.filter (fun evt _ ->
             NodeSet.mem evt events) interact.st_strat.pol in
+        (*TODO compute → relation. *)
         {
             st_game = endGame ;
             st_map = map ;

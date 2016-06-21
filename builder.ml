@@ -114,26 +114,36 @@ let game_parallel_mapped g1 g2 =
     let pg1 = game_selfParallel g1
     and pg2 = game_selfParallel g2 in
     
-    let nParallel = Array.append pg1.g_parallel pg2.g_parallel in
-    let offset = Array.length pg1.g_parallel in
-    let remapG1 = NodeSet.fold (fun evt cur ->
-            NodeMap.add evt evt cur) pg1.g_esp.evts NodeMap.empty in
-    let remapG2 = NodeSet.fold (fun evt cur ->
-            let compId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
-            NodeMap.add evt { evt with
-                nodeId = CompId(compId + offset, ndId) } cur)
-        pg2.g_esp.evts NodeMap.empty in
-    
-    let nEvts = NodeSet.fold (fun evt cur ->
-            let nEvt = NodeMap.find evt remapG2 in
-            remapNode remapG2 nEvt ;
-            NodeSet.add nEvt cur) pg2.g_esp.evts pg1.g_esp.evts in
-    let nPols = NodeMap.fold (fun evt pol cur ->
-            NodeMap.add (NodeMap.find evt remapG2) pol cur)
-        pg2.g_esp.pol pg1.g_esp.pol in
-    let nEsp = { evts = nEvts ; pol = nPols } in
-    
-    { g_esp = nEsp ; g_parallel = nParallel }, remapG1, remapG2
+    (* If one of the games is empty, we simply return it as-is.
+       It is sometimes helpful (e.g. during folds) to fold from the empty game
+       without getting bothered by differences between empty ||| A and A.
+    *)
+    if NodeSet.is_empty g1.g_esp.evts then
+        g2, NodeMap.empty, Helpers.selfNodeMap g2.g_esp.evts
+    else if NodeSet.is_empty g2.g_esp.evts then
+        g1, Helpers.selfNodeMap g1.g_esp.evts, NodeMap.empty
+    else begin
+        let nParallel = Array.append pg1.g_parallel pg2.g_parallel in
+        let offset = Array.length pg1.g_parallel in
+        let remapG1 = NodeSet.fold (fun evt cur ->
+                NodeMap.add evt evt cur) pg1.g_esp.evts NodeMap.empty in
+        let remapG2 = NodeSet.fold (fun evt cur ->
+                let compId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
+                NodeMap.add evt { evt with
+                    nodeId = CompId(compId + offset, ndId) } cur)
+            pg2.g_esp.evts NodeMap.empty in
+        
+        let nEvts = NodeSet.fold (fun evt cur ->
+                let nEvt = NodeMap.find evt remapG2 in
+                remapNode remapG2 nEvt ;
+                NodeSet.add nEvt cur) pg2.g_esp.evts pg1.g_esp.evts in
+        let nPols = NodeMap.fold (fun evt pol cur ->
+                NodeMap.add (NodeMap.find evt remapG2) pol cur)
+            pg2.g_esp.pol pg1.g_esp.pol in
+        let nEsp = { evts = nEvts ; pol = nPols } in
+        
+        { g_esp = nEsp ; g_parallel = nParallel }, remapG1, remapG2
+    end
     
 let game_parallel g1 g2 = (fun (x,_,_) -> x) @@ game_parallel_mapped g1 g2
 

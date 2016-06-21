@@ -46,3 +46,11 @@ val esp_eventsEquality : esp -> esp -> bool
  agree on polarities. *)
 val gamesEqualityNoPol : game -> game -> bool
 
+(** Builds a map mapping every element to itself. *)
+val selfNodeMap : NodeSet.t -> dagNode NodeMap.t
+
+(** Tests events equalitu by comparing the second part of the IDs only
+    (to ensure equality even if the games have been parallelled differently).
+*)
+val eventsEqual : dagNode -> dagNode -> bool
+

@@ -47,6 +47,8 @@ module DagNode = struct
     type t = dagNode
     let compare a b =
         Pervasives.compare a.nodeId b.nodeId
+    let (=) a b = match a.nodeId,b.nodeId with
+        CompId(_,idA), CompId(_,idB) -> idA = idB
 end
 
 module NodeSet = Set.Make(DagNode)
