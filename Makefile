@@ -12,8 +12,8 @@ BUILD=_build/
 
 OBJS=\
 	$(BUILD)datatypes.cmo \
-	$(BUILD)helpers.cmo \
 	$(BUILD)modExtensions.cmo \
+	$(BUILD)helpers.cmo \
 	$(BUILD)builder.cmo \
 	$(BUILD)printer.cmo \
 	$(BUILD)operations/pullback.cmo \

@@ -29,15 +29,16 @@ module Make
         (Parallel : Parallel.S)
         (Compose : Composition.S)
 = struct
+    (** Warning! This implementation only modifies pol without copying
+        anything. *)
     let perp game =
         let oppPol = function
         | PolPos -> PolNeg
         | PolNeg -> PolPos
         | PolNeutral -> PolNeutral in
-        let nGame = Builder.game_copy game in
-        let nEsp = { nGame.g_esp
-            with pol = NodeMap.map oppPol nGame.g_esp.pol } in
-        { nGame with g_esp = nEsp }
+        let nEsp = { game.g_esp
+            with pol = NodeMap.map oppPol game.g_esp.pol } in
+        { game with g_esp = nEsp }
         
     let (&&&) = Pullback.pullback
     
