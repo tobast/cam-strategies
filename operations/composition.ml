@@ -82,6 +82,9 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     let compHidden st1 st2 =
         let interact, leftGames, commonGames, rightGames =
             annotatedInteraction st1 st2 in
+        
+        Builder.dag_transitiveClosure interact.st_strat.evts ;
+        
         let endGame = Parallel.parallelGame
             (gameOfParallels rightGames) 
             (gameOfParallels leftGames) in
@@ -93,7 +96,9 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
             NodeSet.mem toEvt endGame.g_esp.evts) interact.st_map in
         let pol = NodeMap.filter (fun evt _ ->
             NodeSet.mem evt events) interact.st_strat.pol in
-        (*TODO compute → relation. *)
+        
+        Builder.dag_transitiveReduction events ;
+        
         {
             st_game = endGame ;
             st_map = map ;
