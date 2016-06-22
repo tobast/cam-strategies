@@ -182,6 +182,94 @@ let game_addNamedEvents names pol game =
     replRightEsp unpar @@ esp_addNamedEvents names pol unpar.g_esp
     
 let game_addEdge = esp_addEdge
+
+(*** Transitive reduction/closure ***)
+
+let matrixOfGraph dag =
+    let nbVert = NodeSet.cardinal dag in
+    
+    if nbVert = 0 then
+        [||], NodeMap.empty, [||]
+    else begin
+        let indexer =
+            let curId = ref 0 in
+            (fun () -> incr curId;  !curId-1)
+        in
+        let vertOfId = Array.make nbVert (NodeSet.choose dag) in
+        let idOfVert = NodeSet.fold (fun nd curDirect ->
+                let id = indexer () in
+                vertOfId.(id) <- nd ;
+                NodeMap.add nd id curDirect)
+            dag NodeMap.empty in
+        
+        let idOf vert =
+            NodeMap.find vert idOfVert in
+
+        let matr = Array.init nbVert (fun _ -> Array.make nbVert false) in
+        
+        NodeSet.iter (fun nd -> List.iter (fun edge ->
+                (try
+                    matr.(idOf edge.edgeSrc).(idOf edge.edgeDst) <- true
+                with Not_found -> ())
+                (* If the id is not found, that means that the vertice was not
+                 * part of the considered graph. Thus, we might just ignore
+                 * the edge. *)
+            )
+            nd.nodeOutEdges) dag ;
+        
+        matr, idOfVert, vertOfId
+    end 
+
+(** Removes all edges from [dag] and adds the edges defined by [matr]. *)
+let applyEdgesMatrix dag matr vertOfId =
+    let nodeOf id = vertOfId.(id) in (* Easier to understand. *)
+    
+    NodeSet.iter (fun nd -> nd.nodeInEdges <- []; nd.nodeOutEdges <- []) dag ;
+    Array.iteri (fun fromId row -> Array.iteri (fun toId hasEdge ->
+            if hasEdge then esp_addEdge (nodeOf fromId) (nodeOf toId))
+        row) matr
+        
+let floydWarshall matr =
+    let size = Array.length matr in
+    assert (size = 0 || size = Array.length matr.(0)) ;
+    for id = 0 to size-1 do
+        matr.(id).(id) <- true
+    done;
+    for mid = 0 to size-1 do
+        for dep = 0 to size-1 do
+            for arr = 0 to size-1 do
+                matr.(dep).(arr) <- matr.(dep).(arr) ||
+                    (matr.(dep).(mid) && matr.(mid).(arr))
+            done
+        done
+    done
+
+let dag_transitiveClosure dag =
+    let matr, _, vertOfId = matrixOfGraph dag in
+    floydWarshall matr ;
+    applyEdgesMatrix dag matr vertOfId
+
+let dag_transitiveReduction dag =
+    let pathMatr, _, vertOfId = matrixOfGraph dag in
+    floydWarshall pathMatr ;
+    
+    let size = Array.length pathMatr in
+    (* Reflexive reduction *)
+    for id = 0 to size-1 do
+        pathMatr.(id).(id) <- false
+    done;
+    for dep = 0 to size - 1 do
+        for mid  = 0 to size - 1 do
+            if pathMatr.(dep).(mid) then
+                for arr = 0 to size - 1 do
+                    if pathMatr.(mid).(arr) then
+                        pathMatr.(dep).(arr) <- false
+                done
+        done
+    done ;
+    
+    applyEdgesMatrix dag pathMatr vertOfId
+                        
     
 (******** Strategy ********************************************************)
     

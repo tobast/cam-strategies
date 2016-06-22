@@ -60,6 +60,19 @@ val esp_addNamedEvents : string list -> polarity -> esp ->
 (** [esp_addEdge n1 n2] Adds an edge from [n1] to [n2]. *)
 val esp_addEdge : dagNode -> dagNode -> unit
 
+(** {7 Transitive closure/reduction} *)
+
+(** (aka. "transform the edges of the graph to make them match the `->'
+    relation".) *)
+
+(** Computes the transitive closure of the given dag, {e replacing} its edges.
+    Complexity O(|V|^3). *)
+val dag_transitiveClosure : dag -> unit
+
+(** Computes the transitive reduction of the given dag, {e replacing} its
+    edges. Complexity O(|V|^3). *)
+val dag_transitiveReduction : dag -> unit
+
 (********************************************)
 (** {6 Games} *)
 
