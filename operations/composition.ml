@@ -84,17 +84,24 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
         
         Builder.dag_transitiveClosure interact.st_strat.evts ;
         
+        let setMemId x = NodeSet.exists (fun y -> Helpers.eventsEqual x y) in
+        
         let endGame = Parallel.parallelGame
             (gameOfParallels rightGames) 
             (gameOfParallels leftGames) in
         let events = NodeSet.filter (fun x ->
-            NodeSet.exists (fun y -> Helpers.eventsEqual y
-                (NodeMap.find x interact.st_map)) endGame.g_esp.evts)
+            setMemId (NodeMap.find x interact.st_map) endGame.g_esp.evts)
             interact.st_strat.evts in
-        let map = NodeMap.filter (fun _ toEvt ->
-            NodeSet.mem toEvt endGame.g_esp.evts) interact.st_map in
+        let map = NodeMap.fold (fun fromEvt toEvt cur ->
+                let newDests = NodeSet.filter (fun y -> Helpers.eventsEqual y
+                    toEvt) endGame.g_esp.evts in
+                if not @@ NodeSet.is_empty newDests then
+                    NodeMap.add fromEvt (NodeSet.choose newDests) cur
+                else
+                    cur)
+            interact.st_map NodeMap.empty in
         let pol = NodeMap.filter (fun evt _ ->
-            NodeSet.mem evt events) interact.st_strat.pol in
+            setMemId evt events) interact.st_strat.pol in
         
         Builder.dag_transitiveReduction events ;
         
