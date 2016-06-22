@@ -39,16 +39,9 @@ let () =
     Builder.strat_addEdge ndFrom ndTo
 
 module Comp = Composition.Canonical (Pullback.Canonical) (Parallel.Canonical)
-let left::mid::right::[] = List.map List.hd ((fun (x,y,z) -> [x;y;z]) @@
-    Comp.extractGames stratAB stratBC)
-let leftId = Builder.strat_id left
-and rightId= Builder.strat_id right
 
-let parAB = stratAB ||| rightId and parBC = leftId ||| stratBC
-
-let eq = Helpers.gamesEqualityNoPol
-
-(*let () = Printer.dotDebugOfStrategy Format.std_formatter (stratAB *** stratBC) *)
-let stratCompo = stratAB @@@ stratBC
+let stratCompoHidden = stratAB @@@ stratBC
+and stratCompo = stratAB *** stratBC
     
-let () = Printer.dotDebugOfStrategy Format.std_formatter (stratCompo)
+let () = Printer.dotDebugOfStrategy Format.std_formatter
+    (stratCompoHidden ||| stratCompo)

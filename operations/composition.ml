@@ -20,7 +20,6 @@ open ModExtensions
 
 module type S = sig
     exception NotComposed of game
-    val extractGames : strategy -> strategy -> game list *game list *game list
     val compInteraction : strategy -> strategy -> strategy
     val compHidden : strategy -> strategy -> strategy
 end 

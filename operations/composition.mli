@@ -24,9 +24,6 @@ module type S = sig
      composed (that is, not A || B). *)
     exception NotComposed of game
     
-    (** FIXME REMOVE EXPOSITION*)
-    val extractGames : strategy -> strategy -> game list *game list *game list
-
     (** [compInteraction s t] computes the composition interaction s * t on
      the game B where s : S -> A || B and t : T -> B || C, and B is the
      largest game verifying this property IGNORING POLARITIES. *)
