@@ -20,23 +20,29 @@ open ModExtensions
 
 module type S = sig
     exception NotComposed of game
+    exception GameNotFound
+    val compInteractionOnGame : strategy -> strategy -> game -> strategy
     val compInteraction : strategy -> strategy -> strategy
+    val compHiddenOnGame : strategy -> strategy -> game -> strategy
     val compHidden : strategy -> strategy -> strategy
 end 
 
 module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     exception NotComposed of game
+    exception GameNotFound
     
+    let isComposite game =
+        Array.length game.g_parallel > 0
+        
     (** Extracts A, B, C three games from the parallel composed strategies
      such that B is maximal and st1 : S -> A || B, st2 : T -> B || C *)
     let extractGames st1 st2 =
-        let isComposite game = Array.length game.g_parallel > 0 in
         if not @@ isComposite st1.st_game then
             raise @@ NotComposed st1.st_game
         else if not @@ isComposite st2.st_game then
             raise @@ NotComposed st2.st_game
         else
-            (* N^2 algorithm, should be fast enough for what we want. *)
+            (* N^2 algorirthm, should be fast enough for what we want. *)
             let inCenter = ref GameSet.empty in
             let commonSet, leftSet = Array.fold_left_i
                 (fun i (curCommon, curLeft) subGame ->
@@ -61,6 +67,40 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     | hd::[] -> hd
     | hd::tl -> (* Where tl <> [] *)
         List.fold_left Parallel.parallelGame hd tl
+        
+    let annotatedInteractionOnSplit st1 st2 leftGames rightGames midGames =
+        let leftGame = gameOfParallels leftGames
+        and rightGame= gameOfParallels rightGames in
+        (*
+        Format.eprintf "LEFT@."; Printer.dotDebugOfStrategy Format.err_formatter (Parallel.parallelStrat st1 (Builder.strat_id rightGame)) ;
+        Format.eprintf "RIGHT@."; Printer.dotDebugOfStrategy Format.err_formatter (Parallel.parallelStrat (Builder.strat_id leftGame) st2) ;
+        *)
+        Pullback.pullback
+            (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
+            (Parallel.parallelStrat (Builder.strat_id leftGame) st2),
+                leftGames, midGames, rightGames
+        
+    (** Same as {!compInteractionOnGame}, but also returns the game on which
+        we are working. *)
+    let annotatedInteractionOnGame st1 st2 midGames =
+        (* Check [midGame] presence in both [st1] and [st2]. *)
+        if not (Helpers.gameIncluded midGames st1.st_game &&
+                Helpers.gameIncluded midGames st2.st_game) then
+            raise GameNotFound;
+    
+        let leftGames = Array.fold_left (fun cur cGame ->
+                if not @@ Helpers.gameIn cGame midGames
+                    then cGame :: cur
+                    else cur) [] st1.st_game.g_parallel in
+        let rightGames =Array.fold_left (fun cur cGame ->
+                if not @@ Helpers.gameIn cGame midGames
+                    then cGame :: cur
+                    else cur) [] st2.st_game.g_parallel in
+        
+        let midGamesList = if isComposite midGames
+            then Array.to_list midGames.g_parallel
+            else [ midGames ] in
+        annotatedInteractionOnSplit st1 st2 leftGames rightGames midGamesList
     
     (**
      Same as {!compInteraction}, but also returns the game on which we are
@@ -68,20 +108,16 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     *)
     let annotatedInteraction st1 st2 =
         let leftGames, commonGames, rightGames = extractGames st1 st2 in
-        let leftGame = gameOfParallels leftGames
-        and rightGame= gameOfParallels rightGames in
-        Pullback.pullback
-            (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
-            (Parallel.parallelStrat (Builder.strat_id leftGame) st2),
-                leftGames, commonGames, rightGames
+        annotatedInteractionOnSplit st1 st2 leftGames rightGames commonGames
+
+    let compInteractionOnGame st1 st2 midGame =
+        (fun (x,_,_,_) -> x) @@ annotatedInteractionOnGame st1 st2 midGame
 
     let compInteraction st1 st2 =
         (fun (x,_,_,_) -> x) @@ annotatedInteraction st1 st2
-    
-    let compHidden st1 st2 =
-        let interact, leftGames, commonGames, rightGames =
-            annotatedInteraction st1 st2 in
         
+    let compHiddenOnInteraction st1 st2 interact
+            leftGames commonGames rightGames =
         Builder.dag_transitiveClosure interact.st_strat.evts ;
         
         let setMemId x = NodeSet.exists (fun y -> Helpers.eventsEqual x y) in
@@ -113,5 +149,17 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
                     pol = pol
                 }
         }
+        
+    let compHiddenOnGame st1 st2 midGame =
+        let interact, leftGames, commonGames, rightGames =
+            annotatedInteractionOnGame st1 st2 midGame in
+        compHiddenOnInteraction st1 st2 interact
+            leftGames commonGames rightGames
+    
+    let compHidden st1 st2 =
+        let interact, leftGames, commonGames, rightGames =
+            annotatedInteraction st1 st2 in
+        compHiddenOnInteraction st1 st2 interact
+            leftGames commonGames rightGames
 end
 

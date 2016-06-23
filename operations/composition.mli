@@ -23,12 +23,24 @@ module type S = sig
     (** Raised if trying to compute the interaction of a game that is not
      composed (that is, not A || B). *)
     exception NotComposed of game
+    exception GameNotFound
     
-    (** [compInteraction s t] computes the composition interaction s * t on
-     the game B where s : S -> A || B and t : T -> B || C, and B is the
-     largest game verifying this property IGNORING POLARITIES. *)
+    (** [compInteractionOnGame s t B] computes the interaction s * t on
+        the game B where s : S -> perp(A) || B and t : T -> perp(B) -> C.
+        @raise GameNotFound if no such A and C exists.
+    *)
+    val compInteractionOnGame : strategy -> strategy -> game -> strategy
+    
+    (** [compInteraction s t] does the same as {!compInteractionOnGame},
+        but determines automatically the game B such that it is the
+        largest game verifying this property IGNORING POLARITIES. *)
     val compInteraction : strategy -> strategy -> strategy
     
+    (** [compHiddenOnGame s t B] computes the composition with hiding of the
+        intermediary states. See {!compInteractionOnGame}.
+        @raise GameNotFound (see {!compInteractionOnGame}).*)
+    val compHiddenOnGame : strategy -> strategy -> game -> strategy
+
     (** [compHidden s t] computes the composition with hiding of the
      intermediary states. See {!compInteraction}. *)
     val compHidden : strategy -> strategy -> strategy
