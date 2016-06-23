@@ -42,7 +42,8 @@ let () =
 
 module Comp = Composition.Canonical (Pullback.Canonical) (Parallel.Canonical)
 
-let stratCompo = Comp.compHiddenOnGame stratPA_B stratPB_A gmB
+(*let stratCompo = Comp.compHiddenOnGame stratPA_B stratPB_A gmB *)
+let stratCompo = composition stratPA_B stratPB_A gmB
 
 let () = Printer.dotDebugOfStrategy Format.std_formatter stratCompo
 
