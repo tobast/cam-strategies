@@ -71,10 +71,6 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     let annotatedInteractionOnSplit st1 st2 leftGames rightGames midGames =
         let leftGame = gameOfParallels leftGames
         and rightGame= gameOfParallels rightGames in
-        (*
-        Format.eprintf "LEFT@."; Printer.dotDebugOfStrategy Format.err_formatter (Parallel.parallelStrat st1 (Builder.strat_id rightGame)) ;
-        Format.eprintf "RIGHT@."; Printer.dotDebugOfStrategy Format.err_formatter (Parallel.parallelStrat (Builder.strat_id leftGame) st2) ;
-        *)
         Pullback.pullback
             (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
             (Parallel.parallelStrat (Builder.strat_id leftGame) st2),
@@ -122,18 +118,48 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
         
         let setMemId x = NodeSet.exists (fun y -> Helpers.eventsEqual x y) in
         
+        let interactionGameRemap = Array.make
+            (Array.length interact.st_game.g_parallel) (-1) in
+        
         let endGame = Parallel.parallelGame
-            (gameOfParallels rightGames) 
-            (gameOfParallels leftGames) in
+            (gameOfParallels leftGames) 
+            (gameOfParallels rightGames) in
+        
+        (* This is quite heavy. If we tend to have games with many states,
+            or many games in parallel, we might want to enhance this point. *)
+        let remapOnList pos game =
+            let found = ref false in
+            Array.iteri (fun gPos gGame ->
+                if (not !found) && interactionGameRemap.(gPos) = (-1) then
+                    if Helpers.esp_eventsEquality game.g_esp gGame.g_esp then
+                    begin
+                        interactionGameRemap.(gPos) <- pos;
+                        found := true
+                    end) interact.st_game.g_parallel in
+        Array.iteri remapOnList endGame.g_parallel;
+        
         let events = NodeSet.filter (fun x ->
             setMemId (NodeMap.find x interact.st_map) endGame.g_esp.evts)
             interact.st_strat.evts in
         let map = NodeMap.fold (fun fromEvt toEvt cur ->
+            (*
                 let newDests = NodeSet.filter (fun y -> Helpers.eventsEqual y
                     toEvt) endGame.g_esp.evts in
                 if not @@ NodeSet.is_empty newDests then
                     NodeMap.add fromEvt (NodeSet.choose newDests) cur
                 else
+                    cur)
+            *)
+                let evtComp = match toEvt.nodeId with CompId(cmp,_) -> cmp in
+                let nComp = interactionGameRemap.(evtComp) in
+                if nComp >= 0 then begin
+                    let toId = match toEvt.nodeId with CompId(_,id) -> id in
+                    let nDest = NodeSet.choose @@ (NodeSet.filter
+                        (fun y -> (match y.nodeId with CompId(c,i) ->
+                            c=nComp && i = toId))
+                        endGame.g_esp.evts) in
+                    NodeMap.add fromEvt nDest cur
+                end else
                     cur)
             interact.st_map NodeMap.empty in
         let pol = NodeMap.filter (fun evt _ ->
