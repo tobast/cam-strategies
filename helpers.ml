@@ -52,6 +52,19 @@ let rec gamesEqualityNoPol g1 g2 =
                 cur && (gamesEqualityNoPol gm g2.g_parallel.(i)))
             true g1.g_parallel
             
+let gameIn g gSuper =
+    if Array.length gSuper.g_parallel = 0 then
+        gamesEqualityNoPol g gSuper
+    else Array.fold_left (fun cur cGame ->
+        cur || gamesEqualityNoPol g cGame) false gSuper.g_parallel
+
+let gameIncluded g1 g2 =
+    if Array.length g1.g_parallel = 0 then
+        gameIn g1 g2
+    else
+        Array.fold_left (fun cur subgame ->
+            cur && gameIn subgame g2) true g1.g_parallel
+            
 let selfNodeMap elts =
     NodeSet.fold (fun elt cur -> NodeMap.add elt elt cur) elts NodeMap.empty
 

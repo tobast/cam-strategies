@@ -46,6 +46,14 @@ val esp_eventsEquality : esp -> esp -> bool
  agree on polarities. *)
 val gamesEqualityNoPol : game -> game -> bool
 
+(** Returns [true] iff the first game is a subgame of the second (or if they
+    are equal). *)
+val gameIn : game -> game -> bool
+
+(** [gameIncluded g1 g2] returns [true] iff every parallel game of [g1]
+    is also present in [g2], without considering polarities. *)
+val gameIncluded : game -> game -> bool
+
 (** Builds a map mapping every element to itself. *)
 val selfNodeMap : NodeSet.t -> dagNode NodeMap.t
 
