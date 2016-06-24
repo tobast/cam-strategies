@@ -32,3 +32,22 @@ val dotOfGame : Format.formatter -> game -> unit
     way. Only suitable for debug. *)
 val dotDebugOfStrategy : Format.formatter -> strategy -> unit
 
+(** {6 Direct display} *)
+
+(** [dispDot displayer x] takes as its first argument [displayer], a function
+    that outputs [x] in Dot format on a given [Format.formatter], and an object
+    [x] to display, and opens a Dot window displaying it.
+    This assumes that your system has a [dot] program and [feh] installed,
+    and runs the command [dot -Tpng | feh -].
+*)
+val dispDot : (Format.formatter -> 'a -> unit) -> 'a -> unit
+
+(** Composes {!dispDot} with {!dotOfStrategy}. *)
+val dispStrategy : strategy -> unit
+
+(** Composes {!dispDot} with {!dotOfGame}. *)
+val dispGame : game -> unit
+
+(** Composes {!dispDot} with {!dotDebugOfStrategy}. *)
+val dispDebugStrategy : strategy -> unit
+
