@@ -18,7 +18,7 @@
 open Datatypes
 
 let newNode name = {
-        nodeId = CompId(0,Helpers.nextId ()) ;
+        nodeId = CompId(CompBase,Helpers.nextId ()); 
         nodeName = name ;
         nodeInEdges = [] ;
         nodeOutEdges = []
@@ -35,6 +35,10 @@ let mapEdgeNodes ndMap edge =
 let remapNode ndMap nd =
     nd.nodeInEdges <- List.map (mapEdgeNodes ndMap) nd.nodeInEdges ;
     nd.nodeOutEdges <- List.map (mapEdgeNodes ndMap) nd.nodeOutEdges
+    
+let remapIndexes ndMap map =
+    NodeMap.fold (fun key v cur -> NodeMap.add
+        (NodeMap.find key ndMap) v cur) map NodeMap.empty
 
 (** Copies a node. NOTE: the edges' other ends are left alike! *)
 let copyNode nd =
@@ -91,28 +95,32 @@ let esp_addEdge n1 n2 =
     n2.nodeInEdges <- edge::n2.nodeInEdges
     
 (******** Games ***********************************************************)
-let array_empty = [| |]
-let game_empty =
-    { g_esp = esp_empty ; g_parallel = array_empty } 
+let rec game_empty =
+    { g_esp = esp_empty ; g_tree = None }
     
-let game_unparallelize game =
-    if Array.length game.g_parallel = 0 then
-        game
-    else
-        { g_esp = esp_copy game.g_esp ; g_parallel = array_empty }
+let game_unparallelize game = match game.g_tree with
+| None -> game
+| Some _ ->
+    { g_esp = esp_copy game.g_esp ; g_tree = None }
         
-let game_selfParallel game =
-    if Array.length game.g_parallel = 0
-        then { game with g_parallel = [| game |] }
-        else game
+let game_selfParallel game = match game.g_tree with
+| None -> 
+    { game with g_tree = Some(TreeLeaf(game)) }
+| Some _ -> game
         
 let mapRight fct (x,y) = x, fct y
 let replRightEsp game pair =
     mapRight (fun e -> { game with g_esp = e }) pair
+    
+exception BadTreeStructure
 
 let game_parallel_mapped g1 g2 =
     let pg1 = game_selfParallel g1
     and pg2 = game_selfParallel g2 in
+    
+    let pg1_tree,pg2_tree = match pg1.g_tree, pg2.g_tree with
+        | None,_ | _,None -> raise BadTreeStructure
+        | Some x,Some y -> x,y in
     
     (* If one of the games is empty, we simply return it as-is.
        It is sometimes helpful (e.g. during folds) to fold from the empty game
@@ -123,14 +131,18 @@ let game_parallel_mapped g1 g2 =
     else if NodeSet.is_empty g2.g_esp.evts then
         g1, Helpers.selfNodeMap g1.g_esp.evts, NodeMap.empty
     else begin
-        let nParallel = Array.append pg1.g_parallel pg2.g_parallel in
-        let offset = Array.length pg1.g_parallel in
+        let nTree = Some (TreeNode(pg1_tree, pg2_tree)) in
         let remapG1 = NodeSet.fold (fun evt cur ->
-                NodeMap.add evt evt cur) pg1.g_esp.evts NodeMap.empty in
-        let remapG2 = NodeSet.fold (fun evt cur ->
-                let compId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
+                let wayId, ndId = match evt.nodeId with CompId(x,y) -> x,y in
+                let nId = CompId(CompLeft(wayId), ndId) in
                 NodeMap.add evt { evt with
-                    nodeId = CompId(compId + offset, ndId) } cur)
+                    nodeId = nId } cur)
+            pg1.g_esp.evts NodeMap.empty in
+        let remapG2 = NodeSet.fold (fun evt cur ->
+                let wayId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
+                let nId = CompId(CompRight(wayId), ndId) in
+                NodeMap.add evt { evt with
+                    nodeId = nId } cur)
             pg2.g_esp.evts NodeMap.empty in
         
         let nEvts = NodeSet.fold (fun evt cur ->
@@ -142,27 +154,42 @@ let game_parallel_mapped g1 g2 =
             pg2.g_esp.pol pg1.g_esp.pol in
         let nEsp = { evts = nEvts ; pol = nPols } in
         
-        { g_esp = nEsp ; g_parallel = nParallel }, remapG1, remapG2
+        { g_esp = nEsp ; g_tree = nTree}, remapG1, remapG2
     end
     
 let game_parallel g1 g2 = (fun (x,_,_) -> x) @@ game_parallel_mapped g1 g2
 
-let rec game_copy_mapped game =
-    if Array.length game.g_parallel = 0 then
+let game_copy_mapped game =
+    let rec copyTree = function
+    | TreeLeaf(gm) ->
         let nEsp,map = esp_copy_mapped game.g_esp in
-        { g_esp = nEsp; g_parallel = array_empty }, map
-    else begin
-        (*
-        let nParallel = Array.make (Array.length game.g_parallel) game_empty in
-        *)
-        let nParallel, nMap = Array.fold_left
-            (fun (curPar,curMap) pGame ->
-                let gCopy,gMap = game_copy_mapped pGame in
-                gCopy::curPar, NodeMap.merge Helpers.mapMerger curMap gMap)
-            ([],NodeMap.empty) game.g_parallel in
-        (List.fold_left game_parallel game_empty nParallel), nMap
-    end
-
+        TreeLeaf({ g_esp = nEsp; g_tree = None }), map
+    | TreeNode(lTree,rTree) ->
+        let lNode,lMap = copyTree lTree in
+        let rNode,rMap = copyTree rTree in
+        let map = NodeMap.merge Helpers.mapMerger lMap rMap in
+        TreeNode(lNode,rNode), map
+    in
+    
+    let nTree, map =
+        (match game.g_tree with
+        | None ->
+            None, snd @@ copyTree (TreeLeaf(game))
+        | Some t -> (fun (x,y) -> Some x,y) @@ copyTree t) in
+    
+    let dag = NodeMap.fold (fun _ nd cur -> NodeSet.add nd cur) map
+         NodeSet.empty in
+    NodeSet.iter (remapNode map) dag ;
+    let esp = { evts = dag ;
+        pol = NodeMap.fold (fun key pol cur ->
+            NodeMap.add (NodeMap.find key map) pol cur)
+            game.g_esp.pol NodeMap.empty } in
+    
+    {
+        g_esp = esp ;
+        g_tree = nTree
+    }, map
+    
 let game_copy game = fst @@ game_copy_mapped game
 
 let game_addEvent pol game =
@@ -182,6 +209,49 @@ let game_addNamedEvents names pol game =
     replRightEsp unpar @@ esp_addNamedEvents names pol unpar.g_esp
     
 let game_addEdge = esp_addEdge
+
+let treePair tree =
+    match tree with
+    | TreeLeaf(_) -> raise BadTreeStructure
+    | TreeNode(l,r) -> l,r
+let leftTree game = fst @@ treePair game
+let rightTree game = snd @@ treePair game
+
+let game_assocWithReindexer reindexer game =
+    let reindexNd nd =
+        { nd with nodeId = reindexer nd.nodeId} in
+    let reindexSet set =
+        NodeSet.fold (fun nd (curSet,curMap) ->
+            let nNd = reindexNd nd in
+            NodeSet.add nNd curSet, NodeMap.add nd nNd curMap) set
+        (NodeSet.empty,NodeMap.empty) in
+    
+    let nDag, nodeMapping = reindexSet game.g_esp.evts in
+    NodeSet.iter (remapNode nodeMapping) nDag ;
+    let gameTree = match game.g_tree with
+        | None -> raise BadTreeStructure
+        | Some t -> t in
+    let gameA, gameB = treePair @@ leftTree gameTree in
+    let gameC = rightTree gameTree in
+    let nTree = TreeNode(gameA, TreeNode(gameB, gameC) ) in
+    let nPol = remapIndexes nodeMapping game.g_esp.pol in
+
+    {
+        g_esp = { evts = nDag ; pol = nPol } ;
+        g_tree = Some nTree
+    }
+    
+    
+let game_assocRight = game_assocWithReindexer
+    (function CompId(tree,gId) -> CompId((match tree with
+    | CompLeft(CompLeft(x)) -> CompLeft(x)
+    | CompLeft(CompRight(x)) -> CompRight(CompLeft(x))
+    | CompLeft(CompBase) | CompBase -> raise BadTreeStructure
+    | CompRight(x) -> CompRight(CompRight(x))), gId))
+    
+let game_assocLeft = game_assocWithReindexer
+    (assert false)(*TODO*)
+    
 
 (*** Transitive reduction/closure ***)
 

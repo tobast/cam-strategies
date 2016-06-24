@@ -68,6 +68,6 @@ let gameIncluded g1 g2 =
 let selfNodeMap elts =
     NodeSet.fold (fun elt cur -> NodeMap.add elt elt cur) elts NodeMap.empty
 
-let eventsEqual e1 e2 = match e1.nodeId, e2.nodeId with
-    CompId(_,i1), CompId(_,i2) -> i1 = i2
+let eventsEqual e1 e2 =
+    getBaseId e1.nodeId = getBaseId e2.nodeId
 

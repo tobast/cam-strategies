@@ -26,9 +26,14 @@ module SMap = Map.Make(String)
  DAGs, will not have the same nodeId). *)
 type baseNodeId = int
 
-(** Node id allowing to keep track of games composition and its
- associativity. *)
-type nodeId = CompId of int * baseNodeId
+(** The way a game was composed: in A | B, A is left and B is right. *)
+type compWay = CompLeft of compWay | CompRight of compWay | CompBase
+
+(** Node id allowing to keep track of games composition and its order *)
+type nodeId = CompId of compWay * baseNodeId
+
+let getBaseId id = match id with CompId(_,x) -> x
+let getWayId id = match id with CompId(x,_) -> x
 
 (** Node in a DAG. The name is only used for display purposes. *)
 type dagNode = {
@@ -47,8 +52,6 @@ module DagNode = struct
     type t = dagNode
     let compare a b =
         Pervasives.compare a.nodeId b.nodeId
-    let (=) a b = match a.nodeId,b.nodeId with
-        CompId(_,idA), CompId(_,idB) -> idA = idB
 end
 
 module NodeSet = Set.Make(DagNode)
@@ -66,9 +69,13 @@ type esp = {
     pol : polarity NodeMap.t
 }
 
+type 'a binTreeStruct = TreeNode of 'a binTreeStruct * 'a binTreeStruct
+        | TreeLeaf of 'a
+
 type game = {
     g_esp : esp ;
-    g_parallel : game array
+    g_tree : game binTreeStruct option
+        (** None iff the game was never parallelized. *)
 }
 
 module Game = struct

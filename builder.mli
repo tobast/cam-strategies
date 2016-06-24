@@ -76,6 +76,10 @@ val dag_transitiveReduction : dag -> unit
 (********************************************)
 (** {6 Games} *)
 
+(** Thrown when trying to do operations relying on the tree parallel structure
+    of the game, and when this structure doesn't match the expected one. *)
+exception BadTreeStructure
+
 (** See {!esp_empty}. *)
 val game_empty : game
 
@@ -113,6 +117,14 @@ val game_addNamedEvents : string list -> polarity -> game ->
 
 (** See {!esp_addEdge}. *)
 val game_addEdge : dagNode -> dagNode -> unit
+
+(** Transforms a game (A || B) || C to a game A || (B || C)
+    @raise BadTreeStructure when the game hasn't got the right shape. *)
+val game_assocRight : game -> game
+
+(** Transforms a game A || (B || C) to a game (A || B) || C
+    @raise BadTreeStructure when the game hasn't got the right shape. *)
+val game_assocLeft : game -> game
 
 (*********************************************)
 (** {6 Strategies} *)
