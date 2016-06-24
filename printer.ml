@@ -144,4 +144,14 @@ let dotDebugOfStrategy fmt strat =
         "style=dotted, color=blue, arrowtail=tee, dir=both" strat.st_map ;
     
     Format.fprintf fmt "}@."
+    
+let dispDot displayer x =
+    let ch = Unix.open_process_out "dot -Tpng | feh -" in
+    let fmt = Format.formatter_of_out_channel ch in
+    displayer fmt x;
+    Pervasives.close_out ch
+
+let dispStrategy = dispDot dotOfStrategy
+let dispGame = dispDot dotOfGame
+let dispDebugStrategy = dispDot dotDebugOfStrategy
 
