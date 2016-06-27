@@ -30,3 +30,12 @@ module Array = struct
         Array.fold_left (fun cur x -> cur || (pred x)) false
 end
 
+module List = struct
+    include List
+    
+    let map_option mapper l =
+        List.fold_left (fun cur elt -> match mapper elt with
+            | None -> cur
+            | Some x -> x::cur) [] l
+end
+

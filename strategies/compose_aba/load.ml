@@ -40,11 +40,7 @@ let () =
     Builder.strat_addEdge (nodeByName namesPB_A "Aneg")
         (nodeByName namesPB_A "Bneg2")
 
-module Comp = Composition.Canonical (Pullback.Canonical) (Parallel.Canonical)
-
-(*let stratCompo = Comp.compHiddenOnGame stratPA_B stratPB_A gmB *)
-let stratCompo = composition stratPA_B stratPB_A gmB
-
 (*let () = Printer.dotDebugOfStrategy Format.std_formatter stratCompo*)
-let () = Printer.dispDebugStrategy stratCompo
-
+let () =
+(*    Printer.dispDebugStrategy (stratPA_B *** stratPB_A) ; *)
+    Printer.dispDebugStrategy (stratPA_B @@@ stratPB_A)

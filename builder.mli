@@ -122,9 +122,29 @@ val game_addEdge : dagNode -> dagNode -> unit
     @raise BadTreeStructure when the game hasn't got the right shape. *)
 val game_assocRight : game -> game
 
+(** Same as {!game_assocRight}, but also returns the node mapping used. *)
+val game_assocRight_mapped : game -> game * dagNode NodeMap.t
+
 (** Transforms a game A || (B || C) to a game (A || B) || C
     @raise BadTreeStructure when the game hasn't got the right shape. *)
 val game_assocLeft : game -> game
+
+(** Same as {!game_assocLeft}, but also returns the node mapping used. *)
+val game_assocLeft_mapped : game -> game * dagNode NodeMap.t
+
+(** Extracts the game [A] from [A || B].
+    @raise BadTreeStructure if the game is not [A || B]. *)
+val game_extractLeft : game -> game
+
+(** Same as {!game_extractLeft}, but also returns the node mapping used. *)
+val game_extractLeft_mapped : game -> game * dagNode NodeMap.t
+
+(** Extracts the game [B] from [A || B].
+    @raise BadTreeStructure if the game is not [A || B]. *)
+val game_extractRight : game -> game
+
+(** Same as {!game_extractRight}, but also returns the node mapping used. *)
+val game_extractRight_mapped : game -> game * dagNode NodeMap.t
 
 (*********************************************)
 (** {6 Strategies} *)
@@ -162,4 +182,20 @@ val strat_addNamedEvents : (string*dagNode) list -> strategy ->
 
 (** Adds an edge between two events of the strategy *)
 val strat_addEdge : dagNode -> dagNode -> unit
+
+(** Transforms the underlying game with {!game_assocRight} and remaps
+    correctly. *)
+val strat_assocRight : strategy -> strategy
+
+(** Transforms the underlying game with {!game_assocLeft} and remaps
+    correctly. *)
+val strat_assocLeft : strategy -> strategy
+
+(** Transforms the underlying game with {!game_extractLeft} and remaps
+    correctly. *)
+val strat_extractLeft : strategy -> strategy
+
+(** Transforms the underlying game with {!game_extractRight} and remaps
+    correctly. *)
+val strat_extractRight : strategy -> strategy
 

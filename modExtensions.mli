@@ -23,3 +23,8 @@ module Array : sig
     val exists : ('a -> bool) -> 'a array -> bool
 end
 
+module List : sig
+    include module type of List
+    val map_option : ('a -> 'b option) -> 'a list -> 'b list
+end
+

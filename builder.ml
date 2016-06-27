@@ -16,6 +16,7 @@
  *)
 
 open Datatypes
+open ModExtensions
 
 let newNode name = {
         nodeId = CompId(CompBase,Helpers.nextId ()); 
@@ -24,21 +25,40 @@ let newNode name = {
         nodeOutEdges = []
     }
 
-let mappedNode ndMap nd =
-    (try NodeMap.find nd ndMap
+let mappedNodeNF onNotFound ndMap nd =
+    (try Some (NodeMap.find nd ndMap)
+    with Not_found -> onNotFound nd)
+
+let mappedNode map nd =
+    (try NodeMap.find nd map
     with Not_found -> nd)
-let mapEdgeNodes ndMap edge =
-    {
-        edgeSrc = mappedNode ndMap edge.edgeSrc ;
-        edgeDst = mappedNode ndMap edge.edgeDst
-    }
-let remapNode ndMap nd =
-    nd.nodeInEdges <- List.map (mapEdgeNodes ndMap) nd.nodeInEdges ;
-    nd.nodeOutEdges <- List.map (mapEdgeNodes ndMap) nd.nodeOutEdges
+
+let mapEdgeNodes onNotFound ndMap edge =
+    match (
+            mappedNodeNF onNotFound ndMap edge.edgeSrc,
+            mappedNodeNF onNotFound ndMap edge.edgeDst)
+        with
+        | Some src, Some dst -> Some { edgeSrc = src ; edgeDst = dst }
+        | None,_ | _,None -> None
+        
+let remapNodeWithNF notfound ndMap nd =
+    nd.nodeInEdges <- List.map_option (mapEdgeNodes notfound ndMap)
+        nd.nodeInEdges ;
+    nd.nodeOutEdges <- List.map_option (mapEdgeNodes notfound ndMap)
+        nd.nodeOutEdges
+
+let remapNode = remapNodeWithNF (fun x -> Some x)
+let remapDiscardNode = remapNodeWithNF (fun _ -> None)
     
-let remapIndexes ndMap map =
+let remapIndices ndMap map =
     NodeMap.fold (fun key v cur -> NodeMap.add
         (NodeMap.find key ndMap) v cur) map NodeMap.empty
+        
+let remapIndicesDiscard ndMap map =
+    NodeMap.fold (fun key v cur -> (try
+            let mapped = NodeMap.find key ndMap in
+            NodeMap.add mapped v cur
+        with Not_found -> cur)) map NodeMap.empty
 
 (** Copies a node. NOTE: the edges' other ends are left alike! *)
 let copyNode nd =
@@ -145,13 +165,17 @@ let game_parallel_mapped g1 g2 =
                     nodeId = nId } cur)
             pg2.g_esp.evts NodeMap.empty in
         
-        let nEvts = NodeSet.fold (fun evt cur ->
-                let nEvt = NodeMap.find evt remapG2 in
-                remapNode remapG2 nEvt ;
-                NodeSet.add nEvt cur) pg2.g_esp.evts pg1.g_esp.evts in
-        let nPols = NodeMap.fold (fun evt pol cur ->
-                NodeMap.add (NodeMap.find evt remapG2) pol cur)
-            pg2.g_esp.pol pg1.g_esp.pol in
+        let nEvts =
+            let remapEvts map = NodeSet.fold (fun evt cur ->
+                let nEvt = NodeMap.find evt map in
+                NodeSet.add nEvt cur) in
+            remapEvts remapG2 pg2.g_esp.evts
+                (remapEvts remapG1 pg1.g_esp.evts NodeSet.empty) in
+        let nPols =
+            let remapPols map = NodeMap.fold (fun evt pol cur ->
+                    NodeMap.add (NodeMap.find evt map) pol cur) in
+            remapPols remapG2 pg2.g_esp.pol
+                (remapPols remapG1 pg1.g_esp.pol NodeMap.empty) in
         let nEsp = { evts = nEvts ; pol = nPols } in
         
         { g_esp = nEsp ; g_tree = nTree}, remapG1, remapG2
@@ -217,7 +241,7 @@ let treePair tree =
 let leftTree game = fst @@ treePair game
 let rightTree game = snd @@ treePair game
 
-let game_assocWithReindexer reindexer game =
+let game_assocWithReindexer reindexer nTree game =
     let reindexNd nd =
         { nd with nodeId = reindexer nd.nodeId} in
     let reindexSet set =
@@ -228,30 +252,92 @@ let game_assocWithReindexer reindexer game =
     
     let nDag, nodeMapping = reindexSet game.g_esp.evts in
     NodeSet.iter (remapNode nodeMapping) nDag ;
+    let nPol = remapIndices nodeMapping game.g_esp.pol in
+
+    {
+        g_esp = { evts = nDag ; pol = nPol } ;
+        g_tree = Some nTree
+    }, nodeMapping
+    
+    
+let game_assocRight_mapped game =
     let gameTree = match game.g_tree with
         | None -> raise BadTreeStructure
         | Some t -> t in
     let gameA, gameB = treePair @@ leftTree gameTree in
     let gameC = rightTree gameTree in
     let nTree = TreeNode(gameA, TreeNode(gameB, gameC) ) in
-    let nPol = remapIndexes nodeMapping game.g_esp.pol in
+
+    game_assocWithReindexer
+        (function CompId(tree,gId) -> CompId((match tree with
+        | CompLeft(CompLeft(x)) -> CompLeft(x)
+        | CompLeft(CompRight(x)) -> CompRight(CompLeft(x))
+        | CompLeft(CompBase) | CompBase -> raise BadTreeStructure
+        | CompRight(x) -> CompRight(CompRight(x))), gId))
+        nTree game
+    
+let game_assocLeft_mapped game =
+    let gameTree = match game.g_tree with
+        | None -> raise BadTreeStructure
+        | Some t -> t in
+    let gameA = leftTree gameTree in
+    let gameB, gameC = treePair @@ rightTree gameTree in
+    let nTree = TreeNode(TreeNode(gameA,gameB), gameC) in
+
+    game_assocWithReindexer
+        (function CompId(tree,gId) -> CompId((match tree with
+        | CompRight(CompRight(x)) -> CompRight(x)
+        | CompRight(CompLeft(x)) -> CompLeft(CompRight(x))
+        | CompRight(CompBase) | CompBase -> raise BadTreeStructure
+        | CompLeft(x) -> CompLeft(CompLeft(x))), gId))
+        nTree game
+        
+let game_assocRight game = fst @@ game_assocRight_mapped game
+let game_assocLeft game = fst @@ game_assocLeft_mapped game
+    
+let game_extractOfId idTransformer nTree game =
+    let nEvts, evtsMap = NodeSet.fold (fun nd (curEvts, curMap) ->
+            (match idTransformer nd.nodeId with
+            | None -> (curEvts, curMap)
+            | Some nId ->
+                let nNd = { nd with nodeId = nId } in
+                NodeSet.add nNd curEvts, NodeMap.add nd nNd curMap))
+        game.g_esp.evts (NodeSet.empty, NodeMap.empty) in
+    
+    NodeSet.iter (remapDiscardNode evtsMap) nEvts ;
+    let nPol = remapIndicesDiscard evtsMap game.g_esp.pol in
 
     {
-        g_esp = { evts = nDag ; pol = nPol } ;
-        g_tree = Some nTree
-    }
+        g_esp = {
+            evts = nEvts ;
+            pol = nPol } ;
+        g_tree = nTree
+    }, evtsMap
     
-    
-let game_assocRight = game_assocWithReindexer
-    (function CompId(tree,gId) -> CompId((match tree with
-    | CompLeft(CompLeft(x)) -> CompLeft(x)
-    | CompLeft(CompRight(x)) -> CompRight(CompLeft(x))
-    | CompLeft(CompBase) | CompBase -> raise BadTreeStructure
-    | CompRight(x) -> CompRight(CompRight(x))), gId))
-    
-let game_assocLeft = game_assocWithReindexer
-    (assert false)(*TODO*)
-    
+let game_extractLeft_mapped game =
+    let nTree = (match game.g_tree with
+        | None | Some (TreeLeaf _) -> raise BadTreeStructure
+        | Some (TreeNode(nTree, _)) -> Some nTree) in
+    game_extractOfId
+        (fun id -> (match id with
+            | CompId(CompLeft(x), y) -> Some (CompId(x,y))
+            | CompId(CompRight(_),_) -> None
+            | CompId(CompBase,_) -> raise BadTreeStructure))
+        nTree game
+
+let game_extractRight_mapped game =
+    let nTree = (match game.g_tree with
+        | None | Some (TreeLeaf _) -> raise BadTreeStructure
+        | Some (TreeNode(_,nTree)) -> Some nTree) in
+    game_extractOfId
+        (fun id -> (match id with
+            | CompId(CompRight(x), y) -> Some (CompId(x,y))
+            | CompId(CompLeft(_),_) -> None
+            | CompId(CompBase,_) -> raise BadTreeStructure))
+        nTree game
+        
+let game_extractLeft game = fst @@ game_extractLeft_mapped game
+let game_extractRight game = fst @@ game_extractRight_mapped game
 
 (*** Transitive reduction/closure ***)
 
@@ -409,12 +495,43 @@ let strat_newFilled_mapped game =
                 nStrat
         ) game.g_esp.evts (SMap.empty, NodeMap.empty, strat) in
     NodeSet.iter (fun nd -> List.iter (fun edge ->
-        let edge = mapEdgeNodes evMap edge in
-        strat_addEdge edge.edgeSrc edge.edgeDst) nd.nodeOutEdges)
+        (match mapEdgeNodes (fun x -> Some x) evMap edge with
+            | Some edge -> strat_addEdge edge.edgeSrc edge.edgeDst
+            | None -> ()
+        )) nd.nodeOutEdges)
         game.g_esp.evts ;
 
     nStrat, nameMap
     
 let strat_newFilled game =
     fst @@ strat_newFilled_mapped game
+    
+let strat_assocRight strat =
+    let nGame, map = game_assocRight_mapped strat.st_game in
+    let nMap = NodeMap.map (mappedNode map) strat.st_map in
+    { strat with
+        st_game = nGame; st_map = nMap }
+
+let strat_assocLeft strat =
+    let nGame, map = game_assocLeft_mapped strat.st_game in
+    let nMap = NodeMap.map (mappedNode map) strat.st_map in
+    { strat with
+        st_game = nGame; st_map = nMap }
+    
+let strat_extractWith extractor strat =
+    let nGame, map = extractor strat.st_game in
+    let nMap,nEvts = NodeMap.fold (fun sNd gNd (curMap, curEvts) ->
+            (try
+                NodeMap.add sNd (NodeMap.find gNd map) curMap,
+                NodeSet.add sNd curEvts
+            with Not_found -> curMap,curEvts)
+        ) strat.st_map (NodeMap.empty,NodeSet.empty) in
+    {
+        st_strat = { strat.st_strat with evts = nEvts };
+        st_map = nMap ;
+        st_game = nGame
+    }
+    
+let strat_extractLeft = strat_extractWith game_extractLeft_mapped    
+let strat_extractRight = strat_extractWith game_extractRight_mapped    
 

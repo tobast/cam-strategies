@@ -74,7 +74,7 @@ let readAnnotatedGame lexbuf =
     in
     
     { g_esp = fst annGame ;
-      g_parallel = [| |]
+      g_tree = None
     }, snd annGame
     
 let readGame lexbuf = extractGame @@ readAnnotatedGame lexbuf

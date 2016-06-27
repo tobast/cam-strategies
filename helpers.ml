@@ -42,32 +42,44 @@ let mapMerger _ x y = match (x,y) with
 
 let esp_eventsEquality e1 e2 = e1.evts = e2.evts
 
-let rec gamesEqualityNoPol g1 g2 =
-    if Array.length g1.g_parallel <> Array.length g2.g_parallel then
-        false
-    else if Array.length g1.g_parallel = 0 then
-        esp_eventsEquality g1.g_esp g2.g_esp
-    else
-        Array.fold_left_i (fun i cur gm ->
-                cur && (gamesEqualityNoPol gm g2.g_parallel.(i)))
-            true g1.g_parallel
+let rec treesEqualityNoPol t1 t2 = (match t1,t2 with
+| TreeLeaf(lg1), TreeLeaf(lg2) ->
+        esp_eventsEquality lg1.g_esp lg2.g_esp
+| TreeNode(lt1,rt1), TreeNode(lt2,rt2) ->
+        (treesEqualityNoPol lt1 lt2) && (treesEqualityNoPol rt1 rt2)
+| TreeLeaf _, TreeNode _ | TreeNode _, TreeLeaf _ -> false)
+
+let gamesEqualityNoPol g1 g2 = match g1.g_tree, g2.g_tree with
+| None, None -> esp_eventsEquality g1.g_esp g2.g_esp
+| Some t1, Some t2 -> treesEqualityNoPol t1 t2
+| None, Some _ | Some _, None -> false
             
 let gameIn g gSuper =
-    if Array.length gSuper.g_parallel = 0 then
-        gamesEqualityNoPol g gSuper
-    else Array.fold_left (fun cur cGame ->
-        cur || gamesEqualityNoPol g cGame) false gSuper.g_parallel
+    let rec gameInTree = function
+    | TreeLeaf(treeGame) -> gamesEqualityNoPol g treeGame
+    | TreeNode(lt1,lt2) -> gameInTree lt1 || gameInTree lt2
+    in
+    (match gSuper.g_tree with
+    | None -> gamesEqualityNoPol g gSuper
+    | Some tree -> gameInTree tree)
 
-let gameIncluded g1 g2 =
-    if Array.length g1.g_parallel = 0 then
-        gameIn g1 g2
-    else
-        Array.fold_left (fun cur subgame ->
-            cur && gameIn subgame g2) true g1.g_parallel
-            
 let selfNodeMap elts =
     NodeSet.fold (fun elt cur -> NodeMap.add elt elt cur) elts NodeMap.empty
 
 let eventsEqual e1 e2 =
     getBaseId e1.nodeId = getBaseId e2.nodeId
+
+let dumpTreeStructure fmt tree =
+    let rec doDump = function
+        | TreeLeaf _ -> Format.fprintf fmt " o@]"
+        | TreeNode(l,r) ->
+                Format.fprintf fmt "@,|—@[<v 1>";
+                doDump l ;
+                Format.fprintf fmt "@,|—@[<v 1>";
+                doDump r ;
+                Format.fprintf fmt "@]"
+    in
+    Format.fprintf fmt "@[<v 0>" ;
+    doDump tree ;
+    Format.fprintf fmt "@."
 

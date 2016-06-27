@@ -23,9 +23,7 @@ module type S = sig
     val (|||:) : game -> game -> game
     val (|||) : strategy -> strategy -> strategy
     val ( *** ) : strategy -> strategy -> strategy
-    val interaction : strategy -> strategy -> game -> strategy
     val (@@@) : strategy -> strategy -> strategy
-    val composition : strategy -> strategy -> game -> strategy
 end
 
 module Make
@@ -50,9 +48,7 @@ module Make
     let (|||) = Parallel.parallelStrat
     
     let ( *** ) = Compose.compInteraction
-    let interaction = Compose.compInteractionOnGame
     let ( @@@ ) = Compose.compHidden
-    let composition = Compose.compHiddenOnGame
 end
 
 

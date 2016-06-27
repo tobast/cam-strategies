@@ -42,6 +42,10 @@ val mapMerger : 'b -> 'a option -> 'a option -> 'a option
  account. *)
 val esp_eventsEquality : esp -> esp -> bool
 
+(** Returns [true] iff the two trees are equal. Doesn't mind if the underlying
+    games do not agree on polarity. *)
+val treesEqualityNoPol : game binTreeStruct -> game binTreeStruct -> bool
+
 (** Returns [true] iff the two games are equal. Doesn't mind if they do not
  agree on polarities. *)
 val gamesEqualityNoPol : game -> game -> bool
@@ -50,10 +54,6 @@ val gamesEqualityNoPol : game -> game -> bool
     are equal). *)
 val gameIn : game -> game -> bool
 
-(** [gameIncluded g1 g2] returns [true] iff every parallel game of [g1]
-    is also present in [g2], without considering polarities. *)
-val gameIncluded : game -> game -> bool
-
 (** Builds a map mapping every element to itself. *)
 val selfNodeMap : NodeSet.t -> dagNode NodeMap.t
 
@@ -61,4 +61,7 @@ val selfNodeMap : NodeSet.t -> dagNode NodeMap.t
     (to ensure equality even if the games have been parallelled differently).
 *)
 val eventsEqual : dagNode -> dagNode -> bool
+
+(** Dumps a game tree structure (without the leaves' values). *)
+val dumpTreeStructure : Format.formatter -> 'a binTreeStruct -> unit
 

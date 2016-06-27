@@ -19,22 +19,32 @@
 open Datatypes
 open Helpers
 
-let formatNodeId parallel fmt = function CompId(comp,x) ->
-    if Array.length parallel = 0 then
+let rec printWay fmt = function
+| CompBase -> ()
+| CompLeft(x) -> Format.fprintf fmt "←%a" printWay x
+| CompRight(x) -> Format.fprintf fmt "→%a" printWay x
+
+let rec printWayId fmt = function
+| CompBase -> ()
+| CompLeft(x) -> Format.fprintf fmt "l%a" printWayId x
+| CompRight(x) -> Format.fprintf fmt "r%a" printWayId x
+
+let formatNodeId fmt = function CompId(comp,x) ->
+    if comp = CompBase then
         Format.fprintf fmt "%d" x
     else
-        Format.fprintf fmt "(%d,%d)" comp x
+        Format.fprintf fmt "(%a,%d)" printWay comp x
     
-let formatNodeDotId prefix parallel fmt = function CompId(comp,x) ->
-    if Array.length parallel = 0 then
+let formatNodeDotId prefix fmt = function CompId(comp,x) ->
+    if comp = CompBase then
         Format.fprintf fmt "%s%d" prefix x
     else
-        Format.fprintf fmt "%sparallel%d_%d" prefix comp x
+        Format.fprintf fmt "%sparallel%a_%d" prefix printWayId comp x
 
 let stdFmtDotId = formatNodeDotId ""
 
 let dotOfVert ?idFmt:(idFmt=stdFmtDotId) fmt labOverride
-        parallel dagNode polarity attr =
+        dagNode polarity attr =
     let label = if labOverride = "" then dagNode.nodeName else labOverride in
     let color = "color = \""^(match polarity with
         | PolNeg -> "red"
@@ -42,16 +52,16 @@ let dotOfVert ?idFmt:(idFmt=stdFmtDotId) fmt labOverride
         | PolPos -> "green")^"\"" in
     if label = "" then (* Both its label and its override label are empty *)
         Format.fprintf fmt "%a [%s label=\"%a\", %s]@."
-            (idFmt parallel) dagNode.nodeId
+            idFmt dagNode.nodeId
             attr
-            (formatNodeId parallel) dagNode.nodeId
+            formatNodeId dagNode.nodeId
             color
     else
         Format.fprintf fmt "%a [%s label=\"%s (%a)\",%s]@."
-            (idFmt parallel) dagNode.nodeId
+            idFmt dagNode.nodeId
             attr
             label
-            (formatNodeId parallel) dagNode.nodeId
+            formatNodeId dagNode.nodeId
             color
             
 let dotOfEdges ?attr:(attr="") fmt dotIdOf =
@@ -66,13 +76,12 @@ let dotOfStrategy fmt strat =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
                 (getGameNode nd strat).nodeName
-                [||] nd
-                (getPolarity nd strat.st_strat) ""
+                nd (getPolarity nd strat.st_strat) ""
             ) strat.st_strat.evts
     in
     
     let dotedges () =
-        let dotIdOf = stdFmtDotId [||] in
+        let dotIdOf = stdFmtDotId in
         NodeSet.iter (fun nd -> dotOfEdges fmt dotIdOf nd.nodeOutEdges)
             strat.st_strat.evts
     in
@@ -85,12 +94,12 @@ let dotOfStrategy fmt strat =
 let dotOfGame fmt game =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
-            nd.nodeName game.g_parallel nd
+            nd.nodeName nd
             (getPolarity nd game.g_esp) "")
             game.g_esp.evts
     in
     let dotedges () =
-        let dotIdOf = stdFmtDotId (game.g_parallel) in
+        let dotIdOf = stdFmtDotId in
         NodeSet.iter (fun nd -> dotOfEdges fmt dotIdOf nd.nodeOutEdges)
             game.g_esp.evts
     in
@@ -104,15 +113,15 @@ let dotDebugOfStrategy fmt strat =
     (* Print the game as boxed nodes, the strategy as round nodes,
        the map between the two as blue dotted arrows.
        Everything game-related is dashed. *)
-    let dotverts idPrefix attributes parallel getPol set =
+    let dotverts idPrefix attributes getPol set =
         NodeSet.iter (fun nd -> dotOfVert fmt
                 ~idFmt:(formatNodeDotId idPrefix)
-                nd.nodeName parallel nd
+                nd.nodeName nd
                 (getPol nd) attributes)
             set
     in
-    let dotedges idPrefix attributes parallel set =
-        let dotIdOf = formatNodeDotId idPrefix (parallel) in
+    let dotedges idPrefix attributes set =
+        let dotIdOf = formatNodeDotId idPrefix in
         NodeSet.iter (fun nd -> dotOfEdges fmt dotIdOf
             nd.nodeOutEdges ~attr:attributes) set
     in
@@ -126,21 +135,20 @@ let dotDebugOfStrategy fmt strat =
 
     Format.fprintf fmt "digraph {@.";
     Format.fprintf fmt "subgraph cluster_game {@.";
-    dotverts "gm" "style=dashed, shape=box," strat.st_game.g_parallel
+    dotverts "gm" "style=dashed, shape=box,"
         (fun nd -> NodeMap.find nd strat.st_game.g_esp.pol)
         strat.st_game.g_esp.evts ;
-    dotedges "gm" "style=dashed" strat.st_game.g_parallel
-        strat.st_game.g_esp.evts ;
+    dotedges "gm" "style=dashed" strat.st_game.g_esp.evts ;
         
     Format.fprintf fmt "} subgraph cluster_strat {@.";
-    dotverts "st" "" [||] (fun x -> getPolarity x strat.st_strat)
+    dotverts "st" "" (fun x -> getPolarity x strat.st_strat)
         strat.st_strat.evts ;
-    dotedges "st" "" [||] strat.st_strat.evts ;
+    dotedges "st" "" strat.st_strat.evts ;
    
     Format.fprintf fmt "}@.";
 
-    mapEdges (formatNodeDotId "st" [||])
-        (formatNodeDotId "gm" strat.st_game.g_parallel)
+    mapEdges (formatNodeDotId "st")
+        (formatNodeDotId "gm")
         "style=dotted, color=blue, arrowtail=tee, dir=both" strat.st_map ;
     
     Format.fprintf fmt "}@."

@@ -59,19 +59,23 @@ module type S = sig
     (** Composition interaction (ie. without hiding) of two strategies. *)
     val ( *** ) : strategy -> strategy -> strategy
     
+    (*
     (** Computes the interaction (ie. without hiding) of two strategies
         that meet on a given game. This is similar to {!( *** )}, but does
         not try to guess the middle game.
     *)
     val interaction : strategy -> strategy -> game -> strategy
+    *)
     
     (** Composition (with hiding) of two strategies. *)
     val (@@@) : strategy -> strategy -> strategy
     
+    (*
     (** Computes the composition (with hiding) of two strategies
         that meet on a given game. This is similar to {!(@@@)}, but does
         not try to guess the middle game. *)
     val composition : strategy -> strategy -> game -> strategy
+    *)
 end
 
 module Make

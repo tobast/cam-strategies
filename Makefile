@@ -24,6 +24,9 @@ OBJS=\
 	$(BUILD)lang/stratlangParser.cmo \
 	$(BUILD)lang/langReader.cmo
 
+TL_OBJS=\
+	unix.cma
+
 TL_OPENED_MODULES=Helpers Datatypes Builder Printer Operations Canonical \
 	LangReader
 
@@ -69,5 +72,5 @@ toplevelcmd: $(TARGET_BYTE)
 	@echo '$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(OBJS)'
 
 toplevel: $(TARGET_BYTE)
-	$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(OBJS)
+	$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(TL_OBJS) $(OBJS)
 

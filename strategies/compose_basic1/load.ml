@@ -43,5 +43,4 @@ module Comp = Composition.Canonical (Pullback.Canonical) (Parallel.Canonical)
 let stratCompoHidden = stratAB @@@ stratBC
 and stratCompo = stratAB *** stratBC
     
-let () = Printer.dotDebugOfStrategy Format.std_formatter
-    (stratCompoHidden ||| stratCompo)
+let () = Printer.dispDebugStrategy (stratCompoHidden ||| stratCompo)

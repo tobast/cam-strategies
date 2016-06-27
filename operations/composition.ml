@@ -21,171 +21,106 @@ open ModExtensions
 module type S = sig
     exception NotComposed of game
     exception GameNotFound
-    val compInteractionOnGame : strategy -> strategy -> game -> strategy
+    exception MismatchedGames
     val compInteraction : strategy -> strategy -> strategy
-    val compHiddenOnGame : strategy -> strategy -> game -> strategy
     val compHidden : strategy -> strategy -> strategy
 end 
 
 module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     exception NotComposed of game
     exception GameNotFound
+    exception MismatchedGames
     
     let isComposite game =
-        Array.length game.g_parallel > 0
+        game.g_tree = None
         
-    (** Extracts A, B, C three games from the parallel composed strategies
-     such that B is maximal and st1 : S -> A || B, st2 : T -> B || C *)
-    let extractGames st1 st2 =
-        if not @@ isComposite st1.st_game then
-            raise @@ NotComposed st1.st_game
-        else if not @@ isComposite st2.st_game then
-            raise @@ NotComposed st2.st_game
-        else
-            (* N^2 algorirthm, should be fast enough for what we want. *)
-            let inCenter = ref GameSet.empty in
-            let commonSet, leftSet = Array.fold_left_i
-                (fun i (curCommon, curLeft) subGame ->
-                    if Array.exists (fun x ->
-                            Helpers.esp_eventsEquality x.g_esp subGame.g_esp)
-                                st2.st_game.g_parallel then begin
-                        inCenter := GameSet.add subGame !inCenter ;
-                        (subGame :: curCommon, curLeft)
-                    end else
-                        (curCommon, subGame :: curLeft)
-                ) ([],[]) st1.st_game.g_parallel in 
-            let rightSet = Array.fold_left_i
-                (fun i cur subGame ->
-                    if not @@ GameSet.exists
-                            (Helpers.gamesEqualityNoPol subGame) !inCenter
-                        then subGame::cur
-                        else cur) [] st2.st_game.g_parallel in
-            leftSet, commonSet, rightSet
-
     let gameOfParallels parallels = match parallels with
     | [] -> Builder.game_empty
     | hd::[] -> hd
     | hd::tl -> (* Where tl <> [] *)
         List.fold_left Parallel.parallelGame hd tl
         
-    let annotatedInteractionOnSplit st1 st2 leftGames rightGames midGames =
-        let leftGame = gameOfParallels leftGames
-        and rightGame= gameOfParallels rightGames in
-        Pullback.pullback
-            (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
-            (Parallel.parallelStrat (Builder.strat_id leftGame) st2),
-                leftGames, midGames, rightGames
-        
-    (** Same as {!compInteractionOnGame}, but also returns the game on which
-        we are working. *)
-    let annotatedInteractionOnGame st1 st2 midGames =
-        (* Check [midGame] presence in both [st1] and [st2]. *)
-        if not (Helpers.gameIncluded midGames st1.st_game &&
-                Helpers.gameIncluded midGames st2.st_game) then
-            raise GameNotFound;
-    
-        let leftGames = Array.fold_left (fun cur cGame ->
-                if not @@ Helpers.gameIn cGame midGames
-                    then cGame :: cur
-                    else cur) [] st1.st_game.g_parallel in
-        let rightGames =Array.fold_left (fun cur cGame ->
-                if not @@ Helpers.gameIn cGame midGames
-                    then cGame :: cur
-                    else cur) [] st2.st_game.g_parallel in
-        
-        let midGamesList = if isComposite midGames
-            then Array.to_list midGames.g_parallel
-            else [ midGames ] in
-        annotatedInteractionOnSplit st1 st2 leftGames rightGames midGamesList
-    
-    (**
-     Same as {!compInteraction}, but also returns the game on which we are
-     working (cf {!extractGames}). This is useful for {!compHidden}.
-    *)
-    let annotatedInteraction st1 st2 =
-        let leftGames, commonGames, rightGames = extractGames st1 st2 in
-        annotatedInteractionOnSplit st1 st2 leftGames rightGames commonGames
-
-    let compInteractionOnGame st1 st2 midGame =
-        (fun (x,_,_,_) -> x) @@ annotatedInteractionOnGame st1 st2 midGame
-
     let compInteraction st1 st2 =
-        (fun (x,_,_,_) -> x) @@ annotatedInteraction st1 st2
+        (match st1.st_game.g_tree, st2.st_game.g_tree with
+        | Some(TreeNode _), None
+        | Some(TreeNode _), Some(TreeLeaf _) ->
+                raise @@ NotComposed st2.st_game
+        | None, _ | Some(TreeLeaf _), _ ->
+                raise @@ NotComposed st1.st_game
+                
+        | Some (TreeNode(leftTree, midTree1)),
+          Some (TreeNode(midTree2, rightTree)) ->
+            if not @@ Helpers.treesEqualityNoPol midTree1 midTree2 then
+                raise MismatchedGames;
+                
+            let leftGame = Builder.game_extractLeft st1.st_game
+            and rightGame= Builder.game_extractRight st2.st_game in
+            Pullback.pullback
+                (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
+                (Builder.strat_assocLeft
+                    (Parallel.parallelStrat (Builder.strat_id leftGame) st2))
+        )
         
-    let compHiddenOnInteraction st1 st2 interact
-            leftGames commonGames rightGames =
-        Builder.dag_transitiveClosure interact.st_strat.evts ;
-        
-        let setMemId x = NodeSet.exists (fun y -> Helpers.eventsEqual x y) in
-        
-        let interactionGameRemap = Array.make
-            (Array.length interact.st_game.g_parallel) (-1) in
-        
-        let endGame = Parallel.parallelGame
-            (gameOfParallels leftGames) 
-            (gameOfParallels rightGames) in
-        
-        (* This is quite heavy. If we tend to have games with many states,
-            or many games in parallel, we might want to enhance this point. *)
-        let remapOnList pos game =
-            let found = ref false in
-            Array.iteri (fun gPos gGame ->
-                if (not !found) && interactionGameRemap.(gPos) = (-1) then
-                    if Helpers.esp_eventsEquality game.g_esp gGame.g_esp then
-                    begin
-                        interactionGameRemap.(gPos) <- pos;
-                        found := true
-                    end) interact.st_game.g_parallel in
-        Array.iteri remapOnList endGame.g_parallel;
-        
-        let events = NodeSet.filter (fun x ->
-            setMemId (NodeMap.find x interact.st_map) endGame.g_esp.evts)
-            interact.st_strat.evts in
-        let map = NodeMap.fold (fun fromEvt toEvt cur ->
-            (*
-                let newDests = NodeSet.filter (fun y -> Helpers.eventsEqual y
-                    toEvt) endGame.g_esp.evts in
-                if not @@ NodeSet.is_empty newDests then
-                    NodeMap.add fromEvt (NodeSet.choose newDests) cur
-                else
-                    cur)
-            *)
-                let evtComp = match toEvt.nodeId with CompId(cmp,_) -> cmp in
-                let nComp = interactionGameRemap.(evtComp) in
-                if nComp >= 0 then begin
-                    let toId = match toEvt.nodeId with CompId(_,id) -> id in
-                    let nDest = NodeSet.choose @@ (NodeSet.filter
-                        (fun y -> (match y.nodeId with CompId(c,i) ->
-                            c=nComp && i = toId))
-                        endGame.g_esp.evts) in
-                    NodeMap.add fromEvt nDest cur
-                end else
-                    cur)
-            interact.st_map NodeMap.empty in
-        let pol = NodeMap.filter (fun evt _ ->
-            setMemId evt events) interact.st_strat.pol in
-        
-        Builder.dag_transitiveReduction events ;
-        
-        {
-            st_game = endGame ;
-            st_map = map ;
-            st_strat = {
-                    evts = events;
-                    pol = pol
-                }
-        }
-        
-    let compHiddenOnGame st1 st2 midGame =
-        let interact, leftGames, commonGames, rightGames =
-            annotatedInteractionOnGame st1 st2 midGame in
-        compHiddenOnInteraction st1 st2 interact
-            leftGames commonGames rightGames
-    
     let compHidden st1 st2 =
-        let interact, leftGames, commonGames, rightGames =
-            annotatedInteraction st1 st2 in
-        compHiddenOnInteraction st1 st2 interact
-            leftGames commonGames rightGames
+        let interact = compInteraction st1 st2 in
+        Builder.dag_transitiveClosure interact.st_strat.evts ;
+        (* Interact is (by construction) on a game of the form (A || B) || C,
+         * we want to transform it to A || C *)
+        
+        let nTree = (match interact.st_game.g_tree with
+            | None
+            | Some (TreeLeaf _)
+            | Some (TreeNode(TreeLeaf _, _)) ->
+                raise (Builder.BadTreeStructure)
+            | Some (TreeNode(TreeNode(l, _), r)) ->
+                Some (TreeNode(l,r))) in
+        
+        let leftMap, leftEvts = NodeSet.fold (fun nd (curMap,curEvts) ->
+            (match nd.nodeId with
+            | CompId(CompLeft(CompLeft(comp)),id) ->
+                let nNd = { nd with nodeId = CompId(CompLeft(comp),id) } in
+                NodeMap.add nd nNd curMap, NodeSet.add nNd curEvts
+            | _ -> curMap,curEvts))
+            interact.st_game.g_esp.evts (NodeMap.empty, NodeSet.empty) in
+        let rightMap, rightEvts = NodeSet.fold (fun nd (curMap,curEvts) ->
+            (match nd.nodeId with
+            | CompId(CompRight(comp),id) ->
+                let nNd = { nd with nodeId = CompId(CompRight(comp),id) } in
+                NodeMap.add nd nNd curMap, NodeSet.add nNd curEvts
+            | _ -> curMap,curEvts))
+            interact.st_game.g_esp.evts (NodeMap.empty, NodeSet.empty) in
+        let globMap = NodeMap.merge Helpers.mapMerger leftMap rightMap in
+        let remapPol map pol =
+            NodeMap.fold (fun nd p cur -> (try
+                    let nNd = NodeMap.find nd map in
+                    NodeMap.add nNd p cur
+                with Not_found -> cur)) pol NodeMap.empty in
+        let nPols = NodeMap.merge Helpers.mapMerger
+            (remapPol leftMap interact.st_game.g_esp.pol)
+            (remapPol rightMap interact.st_game.g_esp.pol) in
+        
+        let outGame = {
+            g_esp = {
+                evts = NodeSet.union leftEvts rightEvts ;
+                pol = nPols };
+            g_tree = nTree } in
+        
+        let stratMap = NodeMap.fold (fun sNd gNd cur -> (try
+                let nNd = NodeMap.find gNd globMap in
+                NodeMap.add sNd nNd cur
+            with Not_found -> cur)) interact.st_map NodeMap.empty in
+        
+        let stratEvts = NodeSet.filter (fun nd -> NodeMap.mem nd stratMap)
+            interact.st_strat.evts in
+        
+        let outStrat = {
+            st_game = outGame ;
+            st_map = stratMap ;
+            st_strat = { interact.st_strat with
+                evts = stratEvts }
+            } in
+
+        Builder.dag_transitiveReduction outStrat.st_strat.evts ;
+        outStrat
 end
 
