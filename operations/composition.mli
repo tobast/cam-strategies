@@ -29,9 +29,9 @@ module type S = sig
     where [B <> C] (even when removing polarities). *)
     exception MismatchedGames
     
-    (** [compInteraction s t] does the same as {!compInteractionOnGame},
-        but determines automatically the game B such that it is the
-        largest game verifying this property IGNORING POLARITIES. *)
+    (** [compInteraction s t] computes the interaction of s and t,
+        that is, the composition without hiding the intermediary
+        game, when s : S -> perp A || B and t : perp B || C. *)
     val compInteraction : strategy -> strategy -> strategy
     
     (** [compHidden s t] computes the composition with hiding of the
