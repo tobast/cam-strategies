@@ -19,6 +19,7 @@
 (** Defines the data types that will be used to represent strategies. *)
 
 module SMap = Map.Make(String)
+module SSet = Set.Make(String)
 
 (** {6 DAG datatypes } *)
 

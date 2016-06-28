@@ -67,6 +67,19 @@ let copyNode nd =
     nNd.nodeOutEdges <- nd.nodeOutEdges ;
     remapNode (NodeMap.singleton nd nNd) nNd ;
     nNd
+    
+
+(** Returns a map from events of the graph to new events, where the IDs were
+    changed using the given function, and the edges and polarity were adapted
+    accordingly. *)
+let remapEspIndices indexer esp =
+    let nMap,nSet = NodeSet.fold (fun nd (curMap,curSet) ->
+            let nNd = { nd with nodeId = indexer nd.nodeId } in
+            NodeMap.add nd nNd curMap, NodeSet.add nNd curSet)
+        esp.evts (NodeMap.empty, NodeSet.empty) in
+    NodeSet.iter (remapNode nMap) nSet ;
+    let nPol = remapIndices nMap esp.pol in
+    { evts = nSet ; pol = nPol }, nMap
 
 (******** ESP *************************************************************)
 
@@ -294,6 +307,82 @@ let game_assocLeft_mapped game =
         
 let game_assocRight game = fst @@ game_assocRight_mapped game
 let game_assocLeft game = fst @@ game_assocLeft_mapped game
+
+type reassocTree = string Datatypes.binTreeStruct
+exception BadReassocTree of reassocTree
+
+type pathElem = PathLeft | PathRight
+let game_reassoc_mapped game fromTree toTree =
+    let rec mapTree mapper = function
+    | TreeLeaf(x) -> mapper x
+    | TreeNode(l,r) -> TreeNode(mapTree mapper l, mapTree mapper r)
+    in
+    
+    (* Check whether the reallocation trees are correct *)
+    let rec checkTreeLabels tree seenLabels = match tree with
+    | TreeLeaf(lab) ->
+        if SSet.mem lab seenLabels then
+            raise @@ BadReassocTree tree;
+        SSet.add lab seenLabels
+    | TreeNode(l,r) ->
+        let nSeen = checkTreeLabels l seenLabels in
+        checkTreeLabels r nSeen
+    in
+    let fromLabels = checkTreeLabels fromTree SSet.empty in
+    let toLabels = checkTreeLabels toTree SSet.empty in
+    if not (SSet.subset fromLabels toLabels &&
+            SSet.subset toLabels fromLabels)
+        then raise @@ BadReassocTree toTree ;
+    
+    (* They are correct. Try to match fromTree with the game tree. *)
+    let makePathRemapper () =
+        let rec createDestMap map path = function
+        | TreeLeaf(lab) -> SMap.add lab path map
+        | TreeNode(l,r) ->
+            let nMap = createDestMap map (PathLeft::path) l in
+            createDestMap nMap (PathRight::path) r
+        in
+        let destMap = createDestMap SMap.empty [] toTree in
+        let walkSourceTree = mapTree
+            (fun lab -> TreeLeaf(SMap.find lab destMap)) in
+        walkSourceTree fromTree
+    in
+    let rec walkTree2 map guideTree othTree = match guideTree,othTree with
+    | TreeLeaf(lab), nd -> SMap.add lab nd map
+    | TreeNode(guL,guR), TreeNode(otL,otR) ->
+        let nMap = walkTree2 map guL otL in
+        walkTree2 nMap guR otR
+    | TreeNode _, TreeLeaf _ -> raise BadTreeStructure
+    in
+    let gameTree = match game.g_tree with
+        | None -> raise BadTreeStructure
+        | Some x -> x in
+    let treeStructMap = walkTree2 SMap.empty fromTree gameTree in
+    let pathRemapper = makePathRemapper () in
+    
+    (* Everything is mapped, we only have to create the new game now. *)
+    let nTree = mapTree (fun lab -> SMap.find lab treeStructMap) toTree in
+    let indexRemapper ind = match ind with CompId(way, numId) ->
+        let rec replaceId remapTree way = match remapTree,way with
+        | TreeNode(_), CompBase -> raise BadTreeStructure
+        | TreeLeaf(path), wayRem ->
+            List.fold_left (fun cur elt -> match elt with
+                | PathLeft -> CompLeft(cur)
+                | PathRight -> CompRight(cur)) wayRem path
+        | TreeNode(tr,_), CompLeft(wayRem)
+        | TreeNode(_,tr), CompRight(wayRem) -> replaceId tr wayRem
+        in
+        CompId(replaceId pathRemapper way, numId)
+    in
+    let nEsp,evtsMap = remapEspIndices indexRemapper game.g_esp in
+
+    {
+        g_tree = Some nTree ;
+        g_esp = nEsp
+    }, evtsMap
+
+let game_reassoc game fromTree toTree =
+    fst @@ game_reassoc_mapped game fromTree toTree
     
 let game_extractOfId idTransformer nTree game =
     let nEvts, evtsMap = NodeSet.fold (fun nd (curEvts, curMap) ->

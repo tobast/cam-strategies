@@ -132,6 +132,35 @@ val game_assocLeft : game -> game
 (** Same as {!game_assocLeft}, but also returns the node mapping used. *)
 val game_assocLeft_mapped : game -> game * dagNode NodeMap.t
 
+(** Tree structure whose leaves are labelled by identifiers. *)
+type reassocTree = string Datatypes.binTreeStruct
+
+(** Thrown by {!game_reassoc}. *)
+exception BadReassocTree of reassocTree
+
+(** Enforces associativity and commutativity (up to isomorphism) of games'
+    parallel composition by remodelling the tree structure of the compositions
+    of a game.
+    
+    [game_reassoc game fromTree toTree] tries to match [game] with the
+    structure of [fromTree], whose leaves must bear unique identifiers,
+    and tries to transform this structure into [toTree], whose leaves' labels
+    must be a bijective mapping of those of [fromTree].
+    
+    The trees do not necessarily have to bear the whole tree structure of
+    the parallel composition: a label can stand for a whole part of a tree.
+    
+    @raise BadTreeStructure if the first tree does not match the game.
+    @raise BadReassocTree if one of the [reassocTree]s are badly labeled,
+        or if the second tree's labels are not in bijective correspondence
+        with the first tree's (and the raised tree is the second).
+    *)
+val game_reassoc : game -> reassocTree -> reassocTree -> game
+
+(** Same as {!game_reassoc}, but also returns the node mapping used. *)
+val game_reassoc_mapped : game -> reassocTree -> reassocTree ->
+    game * dagNode NodeMap.t
+
 (** Extracts the game [A] from [A || B].
     @raise BadTreeStructure if the game is not [A || B]. *)
 val game_extractLeft : game -> game
