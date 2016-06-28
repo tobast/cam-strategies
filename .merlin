@@ -1,5 +1,6 @@
 S .
 S operations
 S lang
+S linearlambda
 B _build
 B _build/**
