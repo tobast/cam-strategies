@@ -71,7 +71,11 @@ let eventsEqual e1 e2 =
 
 let dumpTreeStructure fmt tree =
     let rec doDump = function
-        | TreeLeaf _ -> Format.fprintf fmt " o@]"
+        | TreeLeaf game ->
+                let pickedName = (try
+                        (NodeSet.choose game.g_esp.evts).nodeName
+                    with Not_found -> "ø") in
+                Format.fprintf fmt " o %s@]" pickedName
         | TreeNode(l,r) ->
                 Format.fprintf fmt "@,|—@[<v 1>";
                 doDump l ;
