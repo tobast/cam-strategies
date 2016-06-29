@@ -181,6 +181,7 @@ let game_parallel_mapped g1 g2 =
         let nEvts =
             let remapEvts map = NodeSet.fold (fun evt cur ->
                 let nEvt = NodeMap.find evt map in
+                remapNode map nEvt ;
                 NodeSet.add nEvt cur) in
             remapEvts remapG2 pg2.g_esp.evts
                 (remapEvts remapG1 pg1.g_esp.evts NodeSet.empty) in
@@ -604,6 +605,12 @@ let strat_assocRight strat =
 let strat_assocLeft strat =
     let nGame, map = game_assocLeft_mapped strat.st_game in
     let nMap = NodeMap.map (mappedNode map) strat.st_map in
+    { strat with
+        st_game = nGame; st_map = nMap }
+    
+let strat_reassoc strat fromTree toTree =
+    let nGame, gameMap = game_reassoc_mapped strat.st_game fromTree toTree in
+    let nMap = NodeMap.map (mappedNode gameMap) strat.st_map in
     { strat with
         st_game = nGame; st_map = nMap }
     

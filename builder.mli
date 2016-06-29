@@ -220,6 +220,10 @@ val strat_assocRight : strategy -> strategy
     correctly. *)
 val strat_assocLeft : strategy -> strategy
 
+(** Transforms the underlying game with {!game_reassoc} and remaps
+    correctly. *)
+val strat_reassoc : strategy -> reassocTree -> reassocTree -> strategy
+
 (** Transforms the underlying game with {!game_extractLeft} and remaps
     correctly. *)
 val strat_extractLeft : strategy -> strategy
