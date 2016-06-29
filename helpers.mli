@@ -66,3 +66,6 @@ val eventsEqual : dagNode -> dagNode -> bool
     a leaf). *)
 val dumpTreeStructure : Format.formatter -> game binTreeStruct -> unit
 
+(** Displays a given way *)
+val dispWay : Format.formatter -> compWay -> unit
+

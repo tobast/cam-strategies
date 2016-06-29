@@ -69,6 +69,16 @@ let selfNodeMap elts =
 let eventsEqual e1 e2 =
     getBaseId e1.nodeId = getBaseId e2.nodeId
 
+let rec dispWay fmt way =
+    let wayChr = function
+    | CompBase -> ""
+    | CompLeft _ -> "←"
+    | CompRight _ -> "→"
+    in match way with
+    | CompBase -> ()
+    | CompLeft(tl) | CompRight(tl) ->
+            Format.fprintf fmt "%s" (wayChr way) ; dispWay fmt tl
+
 let dumpTreeStructure fmt tree =
     let rec doDump = function
         | TreeLeaf game ->
@@ -86,4 +96,4 @@ let dumpTreeStructure fmt tree =
     Format.fprintf fmt "@[<v 0>" ;
     doDump tree ;
     Format.fprintf fmt "@."
-
+    
