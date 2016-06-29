@@ -26,4 +26,6 @@ type lamTerm =
     LamVar of lamVar                (* x *)
   | LamApp of lamTerm * lamTerm     (* M N *)
   | LamAbs of lamVar * lamType * lamTerm      (* λx : τ . M *)
+ 
+type typeEnv = lamType Datatypes.SMap.t
 
