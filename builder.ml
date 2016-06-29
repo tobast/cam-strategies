@@ -575,15 +575,15 @@ let strat_addEvents nEvts strat =
         
 let strat_addEdge = esp_addEdge
 
-let strat_newFilled_namemapped game =
+let strat_newFilled_mapped game =
     let strat = strat_new game in
-    let nameMap, evMap, nStrat = NodeSet.fold
-        (fun nd (nameMap, curMap,curStrat) ->
+    let ndMap, evMap, nStrat = NodeSet.fold
+        (fun nd (ndMap, curMap,curStrat) ->
             let nEvt,nStrat = strat_addNamedEvent nd.nodeName nd curStrat in
-            SMap.add nd.nodeName nEvt nameMap,
+            NodeMap.add nd nEvt ndMap,
                 NodeMap.add nd nEvt curMap,
                 nStrat
-        ) game.g_esp.evts (SMap.empty, NodeMap.empty, strat) in
+        ) game.g_esp.evts (NodeMap.empty, NodeMap.empty, strat) in
     NodeSet.iter (fun nd -> List.iter (fun edge ->
         (match mapEdgeNodes (fun x -> Some x) evMap edge with
             | Some edge -> strat_addEdge edge.edgeSrc edge.edgeDst
@@ -591,10 +591,15 @@ let strat_newFilled_namemapped game =
         )) nd.nodeOutEdges)
         game.g_esp.evts ;
 
-    nStrat, nameMap
+    nStrat, ndMap
+
+let strat_newFilled_namemapped game =
+    let strat,ndMap = strat_newFilled_mapped game in
+    strat, NodeMap.fold (fun gNd sNd cur ->
+            SMap.add (gNd.nodeName) sNd cur) ndMap SMap.empty
     
 let strat_newFilled game =
-    fst @@ strat_newFilled_namemapped game
+    fst @@ strat_newFilled_mapped game
     
 let strat_assocRight strat =
     let nGame, map = game_assocRight_mapped strat.st_game in

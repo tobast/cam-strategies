@@ -19,9 +19,13 @@ open Datatypes
 
 module type S = sig
     val perp : game -> game
+    val copycat : game -> strategy
     val (&&&) : strategy -> strategy -> strategy
     val (|||:) : game -> game -> game
+    val (|||:~) : game -> game -> game * dagNode NodeMap.t * dagNode NodeMap.t
     val (|||) : strategy -> strategy -> strategy
+    val (|||~) : strategy -> strategy ->
+        strategy * dagNode NodeMap.t * dagNode NodeMap.t
     val ( *** ) : strategy -> strategy -> strategy
     val (@@@) : strategy -> strategy -> strategy
 end
@@ -45,10 +49,30 @@ module Make
     let (&&&) = Pullback.pullback
     
     let (|||:) = Parallel.parallelGame
+    let (|||:~) = Parallel.parallelGame_mapped
     let (|||) = Parallel.parallelStrat
+    let (|||~) = Parallel.parallelStrat_mapped
     
     let ( *** ) = Compose.compInteraction
     let ( @@@ ) = Compose.compHidden
+    
+    exception ExnNeutral
+    let copycat game =
+        let pGame = perp game in
+        let nGame, leftMap, rightMap = pGame |||:~ game in
+        let strat,stratMap = Builder.strat_newFilled_mapped nGame in
+        NodeSet.iter (fun nd -> (try
+            let fromMap,toMap = (match Helpers.getPolarity nd game.g_esp with
+                | PolPos -> leftMap,rightMap
+                | PolNeg -> rightMap,leftMap
+                | PolNeutral -> raise ExnNeutral) in
+            let fromNd = NodeMap.find (NodeMap.find nd fromMap) stratMap
+            and toNd = NodeMap.find (NodeMap.find nd toMap) stratMap in
+            
+            Builder.strat_addEdge fromNd toNd
+                
+            with ExnNeutral -> ())) game.g_esp.evts ;
+        strat
 end
 
 

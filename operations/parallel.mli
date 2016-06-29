@@ -37,6 +37,12 @@ module type S = sig
 
     (** [parallelStrat a b] computes the strategy a | b *)
     val parallelStrat : strategy -> strategy -> strategy
+    
+    (** Same as {!parallelStrat}, but [parallelStrat_mapped st1 st2] also
+        returns a map from the events of [sti] to the corresponding ones in
+        the output strategy, for i = 1 or 2. *)
+    val parallelStrat_mapped : strategy -> strategy ->
+        strategy * dagNode NodeMap.t * dagNode NodeMap.t
 end
 
 module Canonical : S

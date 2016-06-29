@@ -35,11 +35,16 @@ module type S = sig
     - the operator for an operation on strategies is the base operator 
     - the operator for an operation on games is the base operator followed by
     a [:] (if it makes sense to have one).
+    - the mapped operator, when available, is postfixed with a [~].
     *)
     
-    (** {6 Perp} *)
+    (** {6 Unary} *)
     
+    (** Dual game *)
     val perp : game -> game
+    
+    (** Copycat strategy of a game. *)
+    val copycat : game -> strategy
     
     (** {6 Pullback} *)
     
@@ -51,31 +56,24 @@ module type S = sig
     (** Parallel composition of two games *)
     val (|||:) : game -> game -> game
     
+    (** Same as {!(|||:)}, returning maps from both games to the new game. *)
+    val (|||:~) : game -> game -> game * dagNode NodeMap.t * dagNode NodeMap.t
+    
     (** Parallel composition of two strategies *)
     val (|||) : strategy -> strategy -> strategy
+    
+    (** Same as {!(|||)}, returning maps from both strategies to the new
+        strategy. *)
+    val (|||~) : strategy -> strategy ->
+        strategy * dagNode NodeMap.t * dagNode NodeMap.t
     
     (** {6 Composition} *)
     
     (** Composition interaction (ie. without hiding) of two strategies. *)
     val ( *** ) : strategy -> strategy -> strategy
     
-    (*
-    (** Computes the interaction (ie. without hiding) of two strategies
-        that meet on a given game. This is similar to {!( *** )}, but does
-        not try to guess the middle game.
-    *)
-    val interaction : strategy -> strategy -> game -> strategy
-    *)
-    
     (** Composition (with hiding) of two strategies. *)
     val (@@@) : strategy -> strategy -> strategy
-    
-    (*
-    (** Computes the composition (with hiding) of two strategies
-        that meet on a given game. This is similar to {!(@@@)}, but does
-        not try to guess the middle game. *)
-    val composition : strategy -> strategy -> game -> strategy
-    *)
 end
 
 module Make

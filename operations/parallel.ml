@@ -25,6 +25,8 @@ module type S = sig
     val parallelEsp_mapped : esp -> esp ->
         esp * dagNode NodeMap.t * dagNode NodeMap.t
     val parallelStrat : strategy -> strategy -> strategy
+    val parallelStrat_mapped : strategy -> strategy ->
+        strategy * dagNode NodeMap.t * dagNode NodeMap.t
 end
 
 module Canonical = struct
@@ -50,7 +52,7 @@ module Canonical = struct
     let parallelEsp esp1 esp2 = (fun (x,_,_) -> x) @@
         parallelEsp_mapped esp1 esp2
     
-    let parallelStrat s1 s2 =
+    let parallelStrat_mapped s1 s2 =
         let game,gameMap1,gameMap2 = parallelGame_mapped
             s1.st_game s2.st_game in
         let strat,stratMap1,stratMap2 = parallelEsp_mapped
@@ -67,6 +69,8 @@ module Canonical = struct
             st_game = game;
             st_strat = strat;
             st_map = map
-        }
+        }, stratMap1, stratMap2
+        
+    let parallelStrat s1 s2 = (fun (x,_,_) -> x) @@ parallelStrat_mapped s1 s2
 end
 
