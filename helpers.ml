@@ -69,9 +69,23 @@ let selfNodeMap elts =
 let eventsEqual e1 e2 =
     getBaseId e1.nodeId = getBaseId e2.nodeId
 
+let rec dispWay fmt way =
+    let wayChr = function
+    | CompBase -> ""
+    | CompLeft _ -> "←"
+    | CompRight _ -> "→"
+    in match way with
+    | CompBase -> ()
+    | CompLeft(tl) | CompRight(tl) ->
+            Format.fprintf fmt "%s" (wayChr way) ; dispWay fmt tl
+
 let dumpTreeStructure fmt tree =
     let rec doDump = function
-        | TreeLeaf _ -> Format.fprintf fmt " o@]"
+        | TreeLeaf game ->
+                let pickedName = (try
+                        (NodeSet.choose game.g_esp.evts).nodeName
+                    with Not_found -> "ø") in
+                Format.fprintf fmt " o %s@]" pickedName
         | TreeNode(l,r) ->
                 Format.fprintf fmt "@,|—@[<v 1>";
                 doDump l ;
@@ -82,4 +96,4 @@ let dumpTreeStructure fmt tree =
     Format.fprintf fmt "@[<v 0>" ;
     doDump tree ;
     Format.fprintf fmt "@."
-
+    
