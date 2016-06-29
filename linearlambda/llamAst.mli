@@ -16,8 +16,14 @@
  *)
 
 type lamVar = string
+type lamAtomic = string
+
+type lamType =
+    LamAtom of lamAtomic
+  | LamArrow of lamType * lamType (* a -> b *)
+
 type lamTerm =
     LamVar of lamVar                (* x *)
   | LamApp of lamTerm * lamTerm     (* M N *)
-  | LamAbs of lamVar * lamTerm      (* λx.M *)
+  | LamAbs of lamVar * lamType * lamTerm      (* λx : τ . M *)
 

@@ -19,15 +19,16 @@
     open LlamAst
     
     let makeAbstraction decls term =
-        List.fold_right (fun decl cur -> LamAbs(decl, cur))
+        List.fold_right (fun (var,typ) cur -> LamAbs(var,typ, cur))
             decls term
 %}
 
-%token Tlpar Trpar Tcomma Tdot Tlambda Teof
+%token Tlpar Trpar Tcomma Tcolon Tdot Tarrow Tlambda Teof
 %token <string> Tvar
 
 %start <LlamAst.lamTerm> term
 
+%right Tarrow
 %nonassoc Tdot Tlambda
 %nonassoc Tvar
 %nonassoc Tlpar
@@ -40,9 +41,17 @@ term:
 lambdaTerm:
 | v = Tvar                                          { LamVar(v) }
 | Tlambda ; 
-    decls = separated_nonempty_list(Tcomma?, Tvar) ;
+    decls = separated_nonempty_list(Tcomma, absDecl) ;
     Tdot ;
     t = lambdaTerm                       %prec Tdot { makeAbstraction decls t }
 | Tlpar ; l = lambdaTerm ; Trpar                    { l }
 | l = lambdaTerm ; r = lambdaTerm        %prec appl { LamApp(l,r) }
 
+absDecl:
+| v=Tvar ; Tcolon ; typ=lambdaType                  { (v,typ) }
+
+lambdaType:
+| l=lambdaType ; Tarrow ; r=lambdaType    %prec Tarrow
+                                                    { LamArrow(l,r) }
+| Tlpar ; typ = lambdaType ; Trpar                  { typ }
+| id=Tvar                                           { LamAtom(id) }

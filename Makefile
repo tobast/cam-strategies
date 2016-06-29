@@ -22,7 +22,8 @@ OBJS=\
 	$(BUILD)operations.cmo \
 	$(BUILD)lang/stratlangLexer.cmo \
 	$(BUILD)lang/stratlangParser.cmo \
-	$(BUILD)lang/langReader.cmo
+	$(BUILD)lang/langReader.cmo \
+	$(BUILD)linearLambda.cmo
 
 TL_OBJS=\
 	unix.cma

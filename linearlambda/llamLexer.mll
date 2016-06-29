@@ -33,9 +33,10 @@ rule token = parse
 | '('                           { Tlpar }
 | ')'                           { Trpar }
 | ','                           { Tcomma }
+| ':'                           { Tcolon }
+| "->" | "→"                    { Tarrow }
 | ['.']                         { Tdot }
-| ['\\' '^']                    { Tlambda }
-| "λ"                           { Tlambda }
+| ['\\' '^'] | "λ"              { Tlambda }
 | var+ as v                     { Tvar(v) }
 | _ as c                        { raise @@ LexicalError ("Illegal character: \
                                         '"^(String.make 1 c)^"'.") }

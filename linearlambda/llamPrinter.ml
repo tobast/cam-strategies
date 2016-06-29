@@ -17,8 +17,17 @@
 
 open LlamAst
 
+let rec printType fmt = function
+| LamAtom(id) -> Format.fprintf fmt "%s" id
+| LamArrow(l,r) ->
+    (match l with
+    | LamAtom _ -> Format.fprintf fmt "%a → %a" printType l printType r
+    | LamArrow _ -> Format.fprintf fmt "(%a) → %a" printType l printType r)
+
 let rec printLambda fmt = function
 | LamVar(x) -> Format.fprintf fmt "%s" x
 | LamApp(m,n) -> Format.fprintf fmt "%a %a" printLambda m printLambda n
-| LamAbs(v,t) -> Format.fprintf fmt "(λ%s·%a)" v printLambda t
+| LamAbs(v,typ,t) ->
+        Format.fprintf fmt "(λ%s : %a · %a)"
+            v printType typ printLambda t
 
