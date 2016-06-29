@@ -545,7 +545,7 @@ let strat_id game =
         st_strat = stratSt ;
         st_map = stratMap
     }
-
+    
 let strat_addNamedEvent name evt strat =
     (*TODO check that the node is part of this game *)
     let nNode = newNode name in
@@ -575,7 +575,7 @@ let strat_addEvents nEvts strat =
         
 let strat_addEdge = esp_addEdge
 
-let strat_newFilled_mapped game =
+let strat_newFilled_namemapped game =
     let strat = strat_new game in
     let nameMap, evMap, nStrat = NodeSet.fold
         (fun nd (nameMap, curMap,curStrat) ->
@@ -594,7 +594,7 @@ let strat_newFilled_mapped game =
     nStrat, nameMap
     
 let strat_newFilled game =
-    fst @@ strat_newFilled_mapped game
+    fst @@ strat_newFilled_namemapped game
     
 let strat_assocRight strat =
     let nGame, map = game_assocRight_mapped strat.st_game in

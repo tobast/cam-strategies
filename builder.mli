@@ -189,7 +189,7 @@ val strat_new : game -> strategy
 
 (** Creates a new strategy on the given game, containing every event and
     edges of the game. Also returns a map of node names to nodes. *)
-val strat_newFilled_mapped : game -> strategy * dagNode SMap.t
+val strat_newFilled_namemapped : game -> strategy * dagNode SMap.t
 
 (** Same as {!strat_newFilled_mapped}, without the map. *)
 val strat_newFilled : game -> strategy
