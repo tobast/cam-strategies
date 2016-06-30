@@ -37,14 +37,22 @@ module Make
 = struct
     (** Warning! This implementation only modifies pol without copying
         anything. *)
-    let perp game =
+    let rec perp game =
         let oppPol = function
         | PolPos -> PolNeg
         | PolNeg -> PolPos
         | PolNeutral -> PolNeutral in
         let nEsp = { game.g_esp
             with pol = NodeMap.map oppPol game.g_esp.pol } in
-        { game with g_esp = nEsp }
+        let nTree =
+            let rec chPol = function
+            | TreeNode(l,r) -> TreeNode(chPol l, chPol r)
+            | TreeLeaf(game) -> TreeLeaf(perp game) in
+            (match game.g_tree with
+            | None -> None
+            | Some tree -> Some (chPol tree))
+            in
+        { g_esp = nEsp ; g_tree = nTree }
         
     let (&&&) = Pullback.pullback
     

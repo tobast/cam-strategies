@@ -26,6 +26,9 @@ exception UnboundVar of lamVar
 (** Raised if a term cannot be typed. *)
 exception BadTyping of lamTerm
 
+(** Raised if a term is not linear *)
+exception NonLinearTerm
+
 (** [typeOf typEnv env term]
     retrieves the type of a term in an environment, and a type environment.
     If an atomic type is not found in the latter, it is assumed to be a
@@ -38,9 +41,12 @@ val gameOfType : lamType -> game
 (** Composition of {!typeOf} and {!gameOfType}. *)
 val gameOfTerm : typeEnv -> typeEnv -> lamTerm -> game
 
-(** [stratOfTerm typEnv env term]
+(** [stratOfTerm_env typEnv env term]
     creates a strategy from [term], using [env] as the type environment for
     variables, and [typEnv] as the type environment for types (see
     {!typeOf}). *)
-val stratOfterm : typeEnv -> typeEnv -> lamTerm -> strategy
+val stratOfTerm_env : typeEnv -> typeEnv -> lamTerm -> strategy
+
+(** Same as {!stratOfTerm_env}, but starting with empty environments. *)
+val stratOfTerm : lamTerm -> strategy
 

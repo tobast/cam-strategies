@@ -15,4 +15,8 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+(** Pretty-printing of a lambda-term type. *)
+val printType : Format.formatter -> LlamAst.lamType -> unit
+
+(** Pretty-printing of a lambda-term. *)
 val printLambda : Format.formatter -> LlamAst.lamTerm -> unit

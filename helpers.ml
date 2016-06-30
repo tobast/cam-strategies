@@ -80,12 +80,17 @@ let rec dispWay fmt way =
             Format.fprintf fmt "%s" (wayChr way) ; dispWay fmt tl
 
 let dumpTreeStructure fmt tree =
+    let dispPol fmt = function
+        | PolPos -> Format.fprintf fmt "+"
+        | PolNeg -> Format.fprintf fmt "-"
+        | PolNeutral -> () in
     let rec doDump = function
         | TreeLeaf game ->
-                let pickedName = (try
-                        (NodeSet.choose game.g_esp.evts).nodeName
-                    with Not_found -> "ø") in
-                Format.fprintf fmt " o %s@]" pickedName
+                let pickedName,pickedPol = (try
+                        let pickNd=NodeSet.choose game.g_esp.evts in
+                        pickNd.nodeName, (NodeMap.find pickNd game.g_esp.pol)
+                    with Not_found -> "ø",PolNeutral) in
+                Format.fprintf fmt " o %s (%a)@]" pickedName dispPol pickedPol
         | TreeNode(l,r) ->
                 Format.fprintf fmt "@,|—@[<v 1>";
                 doDump l ;

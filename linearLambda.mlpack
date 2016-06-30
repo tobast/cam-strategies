@@ -4,3 +4,4 @@ linearlambda/LlamLexer
 linearlambda/LlamParser
 linearlambda/LlamOpener
 linearlambda/LlamPrinter
+linearlambda/LlamInterpret
