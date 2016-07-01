@@ -27,19 +27,17 @@ let findType env v =
     (try SMap.find v env
     with Not_found -> raise @@ UnboundVar v)
     
-(** YES, this does not necessarily terminate. If there is a loop in the types'
-    declaration, it's the user's problem. *)
 let rec expandType env typ = match typ with
 | LamAtom(t) ->
     (try expandType env (SMap.find t env)
     with Not_found -> typ)
 | LamArrow(l,r) -> LamArrow(expandType env l, expandType env r)
 
-let rec typeOf typEnv env term = match term with
-| LamVar v -> expandType typEnv @@ findType env v
+let rec typeOf env term = match term with
+| LamVar v -> findType env v
 | LamApp(s,t) ->
-    let lType = typeOf typEnv env s in
-    let rType = typeOf typEnv env t in
+    let lType = typeOf env s in
+    let rType = typeOf env t in
     (match lType with
     | LamArrow(fromTyp,toTyp) ->
         if fromTyp = rType then
@@ -48,34 +46,45 @@ let rec typeOf typEnv env term = match term with
             raise @@ BadTyping(term)
     | _ -> raise @@ BadTyping(term))
 | LamAbs(v, vTyp, absTerm) ->
-    LamArrow(expandType typEnv vTyp, typeOf typEnv
-            (SMap.add v vTyp env) absTerm)
+    LamArrow(vTyp, typeOf (SMap.add v vTyp env) absTerm)
+
+let typeOfTerm term = typeOf SMap.empty term
     
 let gameOfType =
     let gameEnv = ref SMap.empty in
-    let rec mkGame typ = Builder.(Operations.Canonical.(match typ with
-    | LamAtom(atom) ->
-        if not @@ SMap.mem atom !gameEnv then
-            gameEnv := SMap.add atom
-                (snd @@ game_addNamedEvent atom PolNeg game_empty) !gameEnv ;
-        SMap.find atom !gameEnv
-    | LamArrow(l,r) ->
-        let lGame = perp @@ mkGame l in
-        let rGame = mkGame r in
-        lGame |||: rGame
-    )) in
-    mkGame
+    (fun envList typ ->
+        let rec mkGame typ = Builder.(Operations.Canonical.(match typ with
+        | LamAtom(atom) ->
+            if not @@ SMap.mem atom !gameEnv then
+                gameEnv := SMap.add atom
+                    (snd @@ game_addNamedEvent atom PolNeg game_empty)
+                    !gameEnv ;
+            SMap.find atom !gameEnv
+        | LamArrow(l,r) ->
+            let lGame = perp @@ mkGame l in
+            let rGame = mkGame r in
+            lGame |||: rGame
+        )) in
+        let rec mkEnv envList = Builder.(Operations.Canonical.(
+            match envList with
+            | [] -> game_empty
+            | (_,typ)::[] -> perp @@ mkGame typ
+            | (_,typ)::tl ->
+                (mkEnv tl) |||: (perp @@ mkGame typ)))
+        in
+        (mkEnv envList) |||: (mkGame typ)
+    )
 
-let gameOfTerm typEnv env term =
-    gameOfType @@ typeOf typEnv env term
+let gameOfTerm env term =
+    gameOfType env @@ typeOfTerm term
 
 let splitEnv env lTerm rTerm =
     (* Returns (outEnv, digEnv \ {extracted}, alreadyExtracted u {extracted})*)
     let rec digEnv curEnv toSplit alreadyExtracted unwatched = function
     | LamVar(v) ->
-        if SMap.mem v toSplit then (* Extract from environment *)
-            SMap.add v (SMap.find v toSplit) curEnv,
-                SMap.remove v toSplit,
+        if List.mem_assoc v toSplit then (* Extract from environment *)
+            (v,(List.assoc v toSplit))::curEnv,
+                List.remove_assoc v toSplit,
                 SSet.add v alreadyExtracted
         else if SSet.mem v alreadyExtracted then
             raise NonLinearTerm
@@ -92,35 +101,94 @@ let splitEnv env lTerm rTerm =
     in
     
     let lEnv, nEnv, extracted =
-        digEnv SMap.empty env SSet.empty SSet.empty lTerm in
+        digEnv [] env SSet.empty SSet.empty lTerm in
     let rEnv, finalEnv, _ =
-        digEnv SMap.empty nEnv extracted SSet.empty rTerm in
-    if not @@ SMap.is_empty finalEnv then
+        digEnv [] nEnv extracted SSet.empty rTerm in
+    if finalEnv <> [] then
         raise NonLinearTerm ;
     lEnv,rEnv
 
-let rec stratOfTerm_env typEnv env term = Builder.(match term with
-| LamVar v -> copycat (gameOfType @@ findType env v)
-| LamAbs(v,vTyp,absTerm) ->
-        strat_assocRight (
-            (copycat @@ perp @@ gameOfType vTyp) |||
-            (stratOfTerm_env typEnv (SMap.add v vTyp env) absTerm))
-| LamApp(lTerm,rTerm) ->
-    let lEnv,rEnv = splitEnv env lTerm rTerm in
-    let ltermGame = (gameOfType @@ typeOf typEnv lEnv lTerm) in
-    let ccStrat = copycat ((perp ltermGame) |||: ltermGame) in
-    let lStrat = stratOfTerm_env typEnv lEnv lTerm
-    and rStrat = stratOfTerm_env typEnv rEnv rTerm in
-(*    Printer.dispDebugStrategy ccStrat ; *)
-(*    Printer.dispDebugStrategy (lStrat ||| rStrat) ; *)
-    Format.printf "%a@." LlamPrinter.printLambda term;
-    Format.printf "[----------------------------@." ;
-    Helpers.dumpTreeStructure Format.std_formatter (match ccStrat.st_game.g_tree with Some x -> x);
-    Format.printf "-----------------------------@." ;
-    Helpers.dumpTreeStructure Format.std_formatter (match (lStrat ||| rStrat).st_game.g_tree with Some x -> x);
-    Format.printf "----------------------------]@." ;
-    ccStrat @@@ (lStrat ||| rStrat)
-)
+let stratOfTerm term = Builder.(
+    let rec doBuild  listEnv env term = match term with
+    | LamVar v ->
+        (match listEnv with
+        | (var,_)::[] -> assert(v=var)
+        | _ -> assert false) ;
+        copycat (gameOfType [] @@ findType env v)
+    | LamAbs(v,vTyp,absTerm) ->
+        (if listEnv = []
+            then (fun x -> x)
+            else strat_assocRight) @@
+            doBuild ((v,vTyp)::listEnv) (SMap.add v vTyp env) absTerm
+    | LamApp(lTerm,rTerm) ->
+        let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
+        let lEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
+            SMap.empty lListEnv in
+        let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
+            SMap.empty rListEnv in
 
-let stratOfTerm = stratOfTerm_env SMap.empty SMap.empty
+        let ccStrat = copycat
+            (gameOfType [] @@ typeOf env lTerm) in
+        
+        let parStrat = 
+            let mkEnvOrder =
+                let rec idOf name cPos = function
+                | [] -> raise Not_found
+                | (hd,_)::tl ->
+                    if name = hd
+                        then cPos
+                        else idOf name (cPos+1) tl
+                in
+                List.map (fun (name,_) -> idOf name 0 listEnv)
+            in
+            let lEnvOrder = mkEnvOrder lListEnv
+            and rEnvOrder = mkEnvOrder rListEnv in
+            
+            let rec mkReassocTree labels =
+                let mkLabel pos = TreeLeaf(string_of_int pos) in
+                match labels with
+                | [] -> assert false
+                | pos::[] -> mkLabel pos
+                | pos::tl -> TreeNode(mkReassocTree tl, mkLabel pos)
+            in
+            let rec mkFinalTree cId = function
+            | 0 -> assert false
+            | 1 -> TreeLeaf(string_of_int cId)
+            | k -> TreeNode(mkFinalTree (cId+1) (k-1),
+                TreeLeaf(string_of_int cId)) in
+            
+            let lStrat = doBuild lListEnv lEnv lTerm
+            and rStrat = doBuild rListEnv rEnv rTerm in
+            let parStrat = strat_reassoc (lStrat ||| rStrat)
+                (TreeNode(
+                    TreeNode(TreeLeaf("gamma"),TreeLeaf("A")),
+                    TreeNode(TreeLeaf("delta"),TreeLeaf("B"))))
+                (TreeNode(
+                    TreeNode(TreeLeaf("gamma"),TreeLeaf("delta")),
+                    TreeNode(TreeLeaf("A"),TreeLeaf("B")))) in
+            
+            let reassocTree,finalTree = match lEnvOrder,rEnvOrder with
+            | [],[] ->
+                TreeLeaf("A"),TreeLeaf("A")
+            | onlyEnv,[] | [],onlyEnv ->
+                TreeNode(mkReassocTree onlyEnv, TreeLeaf("right")),
+                TreeNode(mkFinalTree 0 (List.length listEnv),
+                    TreeLeaf("right"))
+            | _,_ ->
+                TreeNode(TreeNode(
+                    mkReassocTree lEnvOrder,
+                    mkReassocTree rEnvOrder), TreeLeaf("right")),
+                TreeNode(mkFinalTree 0 (List.length listEnv),
+                    TreeLeaf("right")) in
+            
+            strat_reassoc parStrat reassocTree finalTree in
+        
+            
+        (*
+        Printer.dispDebugStrategy ccStrat ;
+        Printer.dispDebugStrategy parStrat ; *)
+        ccStrat @@@ parStrat
+    in
+    doBuild [] SMap.empty (LlamHelpers.disambiguate term)
+)
 

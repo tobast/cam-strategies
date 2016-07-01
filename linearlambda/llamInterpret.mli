@@ -29,24 +29,11 @@ exception BadTyping of lamTerm
 (** Raised if a term is not linear *)
 exception NonLinearTerm
 
-(** [typeOf typEnv env term]
-    retrieves the type of a term in an environment, and a type environment.
-    If an atomic type is not found in the latter, it is assumed to be a
-    "real" atomic type; else, the mapped type is inlined. *)
-val typeOf : typeEnv -> typeEnv -> lamTerm -> lamType
+(** [typeOfTerm term]
+    retrieves the type of a term. *)
+val typeOfTerm : lamTerm -> lamType
 
-(** [gameOfType typ] creates a game from a given type. *)
-val gameOfType : lamType -> game
-
-(** Composition of {!typeOf} and {!gameOfType}. *)
-val gameOfTerm : typeEnv -> typeEnv -> lamTerm -> game
-
-(** [stratOfTerm_env typEnv env term]
-    creates a strategy from [term], using [env] as the type environment for
-    variables, and [typEnv] as the type environment for types (see
-    {!typeOf}). *)
-val stratOfTerm_env : typeEnv -> typeEnv -> lamTerm -> strategy
-
-(** Same as {!stratOfTerm_env}, but starting with empty environments. *)
+(** [stratOfTerm term]
+    creates a strategy from [term]. *)
 val stratOfTerm : lamTerm -> strategy
 

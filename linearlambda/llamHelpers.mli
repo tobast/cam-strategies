@@ -18,6 +18,10 @@
 (** Functions related to linear lambda-calculus that don't fit a particular
     module. *)
 
-val lambdaize : string -> LlamAst.lamTerm
 (** Interprets a string as a lambda-term. *)
+val lambdaize : string -> LlamAst.lamTerm
+
+(** Renames variables (adding [']) so that no two distinct variables have the
+    same name. *)
+val disambiguate : LlamAst.lamTerm -> LlamAst.lamTerm
 
