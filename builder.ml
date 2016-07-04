@@ -155,45 +155,35 @@ let game_parallel_mapped g1 g2 =
         | None,_ | _,None -> raise BadTreeStructure
         | Some x,Some y -> x,y in
     
-    (* If one of the games is empty, we simply return it as-is.
-       It is sometimes helpful (e.g. during folds) to fold from the empty game
-       without getting bothered by differences between empty ||| A and A.
-    *)
-    if NodeSet.is_empty g1.g_esp.evts then
-        g2, NodeMap.empty, Helpers.selfNodeMap g2.g_esp.evts
-    else if NodeSet.is_empty g2.g_esp.evts then
-        g1, Helpers.selfNodeMap g1.g_esp.evts, NodeMap.empty
-    else begin
-        let nTree = Some (TreeNode(pg1_tree, pg2_tree)) in
-        let remapG1 = NodeSet.fold (fun evt cur ->
-                let wayId, ndId = match evt.nodeId with CompId(x,y) -> x,y in
-                let nId = CompId(CompLeft(wayId), ndId) in
-                NodeMap.add evt { evt with
-                    nodeId = nId } cur)
-            pg1.g_esp.evts NodeMap.empty in
-        let remapG2 = NodeSet.fold (fun evt cur ->
-                let wayId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
-                let nId = CompId(CompRight(wayId), ndId) in
-                NodeMap.add evt { evt with
-                    nodeId = nId } cur)
-            pg2.g_esp.evts NodeMap.empty in
-        
-        let nEvts =
-            let remapEvts map = NodeSet.fold (fun evt cur ->
-                let nEvt = NodeMap.find evt map in
-                remapNode map nEvt ;
-                NodeSet.add nEvt cur) in
-            remapEvts remapG2 pg2.g_esp.evts
-                (remapEvts remapG1 pg1.g_esp.evts NodeSet.empty) in
-        let nPols =
-            let remapPols map = NodeMap.fold (fun evt pol cur ->
-                    NodeMap.add (NodeMap.find evt map) pol cur) in
-            remapPols remapG2 pg2.g_esp.pol
-                (remapPols remapG1 pg1.g_esp.pol NodeMap.empty) in
-        let nEsp = { evts = nEvts ; pol = nPols } in
-        
-        { g_esp = nEsp ; g_tree = nTree}, remapG1, remapG2
-    end
+    let nTree = Some (TreeNode(pg1_tree, pg2_tree)) in
+    let remapG1 = NodeSet.fold (fun evt cur ->
+            let wayId, ndId = match evt.nodeId with CompId(x,y) -> x,y in
+            let nId = CompId(CompLeft(wayId), ndId) in
+            NodeMap.add evt { evt with
+                nodeId = nId } cur)
+        pg1.g_esp.evts NodeMap.empty in
+    let remapG2 = NodeSet.fold (fun evt cur ->
+            let wayId,ndId = match evt.nodeId with CompId(x,y) -> x,y in
+            let nId = CompId(CompRight(wayId), ndId) in
+            NodeMap.add evt { evt with
+                nodeId = nId } cur)
+        pg2.g_esp.evts NodeMap.empty in
+    
+    let nEvts =
+        let remapEvts map = NodeSet.fold (fun evt cur ->
+            let nEvt = NodeMap.find evt map in
+            remapNode map nEvt ;
+            NodeSet.add nEvt cur) in
+        remapEvts remapG2 pg2.g_esp.evts
+            (remapEvts remapG1 pg1.g_esp.evts NodeSet.empty) in
+    let nPols =
+        let remapPols map = NodeMap.fold (fun evt pol cur ->
+                NodeMap.add (NodeMap.find evt map) pol cur) in
+        remapPols remapG2 pg2.g_esp.pol
+            (remapPols remapG1 pg1.g_esp.pol NodeMap.empty) in
+    let nEsp = { evts = nEvts ; pol = nPols } in
+    
+    { g_esp = nEsp ; g_tree = nTree}, remapG1, remapG2
     
 let game_parallel g1 g2 = (fun (x,_,_) -> x) @@ game_parallel_mapped g1 g2
 
@@ -332,8 +322,10 @@ let game_reassoc_mapped game fromTree toTree =
     let fromLabels = checkTreeLabels fromTree SSet.empty in
     let toLabels = checkTreeLabels toTree SSet.empty in
     if not (SSet.subset fromLabels toLabels &&
-            SSet.subset toLabels fromLabels)
+            SSet.subset toLabels (SSet.add "EMPTY" fromLabels))
         then raise @@ BadReassocTree toTree ;
+    if SSet.mem "EMPTY" fromLabels then
+        raise @@ BadReassocTree fromTree ;
     
     (* They are correct. Try to match fromTree with the game tree. *)
     let makePathRemapper () =
@@ -358,7 +350,9 @@ let game_reassoc_mapped game fromTree toTree =
     let gameTree = match game.g_tree with
         | None -> raise BadTreeStructure
         | Some x -> x in
-    let treeStructMap = walkTree2 SMap.empty fromTree gameTree in
+    let treeStructMap = walkTree2 (SMap.singleton "EMPTY"
+            (TreeLeaf game_empty))
+        fromTree gameTree in
     let pathRemapper = makePathRemapper () in
     
     (* Everything is mapped, we only have to create the new game now. *)

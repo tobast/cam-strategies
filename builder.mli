@@ -147,13 +147,18 @@ exception BadReassocTree of reassocTree
     and tries to transform this structure into [toTree], whose leaves' labels
     must be a bijective mapping of those of [fromTree].
     
+    The special label ["EMPTY"] may be used in [toTree] {b only} to specify
+    that an empty game should be added here in the structure (this might be
+    useful in some cases, to enforce a particular structure).
+    
     The trees do not necessarily have to bear the whole tree structure of
     the parallel composition: a label can stand for a whole part of a tree.
     
     @raise BadTreeStructure if the first tree does not match the game.
     @raise BadReassocTree if one of the [reassocTree]s are badly labeled,
-        or if the second tree's labels are not in bijective correspondence
-        with the first tree's (and the raised tree is the second).
+        if the second tree's labels are not in bijective correspondence
+        with the first tree's (and the raised tree is the second),
+        or if the first tree contains an ["EMPTY"] label.
     *)
 val game_reassoc : game -> reassocTree -> reassocTree -> game
 

@@ -20,7 +20,8 @@
 open Datatypes
 
 module type S = sig
-    (** [parallelGame a b] computes the game A | B *)
+    (** [parallelGame a b] computes the game A | B.
+        Warning: the game [game_empty ||| A] is {b not} the game [A]!*)
     val parallelGame : game -> game -> game
     
     (** Same as {!parallelGame}, also returning maps from the events of
