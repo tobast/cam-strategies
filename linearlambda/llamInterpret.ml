@@ -72,7 +72,9 @@ let gameOfType =
             | (_,typ)::tl ->
                 (mkEnv tl) |||: (perp @@ mkGame typ)))
         in
-        (mkEnv envList) |||: (mkGame typ)
+        if envList = []
+            then mkGame typ
+            else (mkEnv envList) |||: (mkGame typ)
     )
 
 let gameOfTerm env term =
@@ -127,7 +129,6 @@ let stratOfTerm term = Builder.(
         let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
             SMap.empty rListEnv in
 
-        (*FIXME why is the associativity wrong here?! *)
         let ccStrat = strat_assocLeft @@ copycat
             (gameOfType [] @@ typeOf env lTerm) in
         
@@ -189,7 +190,7 @@ let stratOfTerm term = Builder.(
             
             let reassocTree,finalTree = match lEnvOrder,rEnvOrder with
             | [],[] ->
-                TreeLeaf("A"),TreeLeaf("A")
+                TreeLeaf("A"),TreeNode(TreeLeaf("EMPTY"),TreeLeaf("A"))
             | onlyEnv,[] | [],onlyEnv ->
                 TreeNode(mkReassocTree onlyEnv, TreeLeaf("right")),
                 TreeNode(mkFinalTree 0 (List.length listEnv),
@@ -201,13 +202,8 @@ let stratOfTerm term = Builder.(
                 TreeNode(mkFinalTree 0 (List.length listEnv),
                     TreeLeaf("right")) in
             
-                strat_reassoc parStrat reassocTree finalTree in
+            strat_reassoc parStrat reassocTree finalTree in
     
-        let extropt = function None -> assert false | Some x -> x in
-        Format.eprintf "%a@.===@.%a@.===@."
-            Helpers.dumpGameTree (extropt ccStrat.st_game.g_tree)
-            Helpers.dumpGameTree (extropt parStrat.st_game.g_tree) ;
-
         ccStrat @@@ parStrat
     in
     doBuild [] SMap.empty (LlamHelpers.disambiguate term)
