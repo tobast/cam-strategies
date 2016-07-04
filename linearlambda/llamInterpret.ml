@@ -127,7 +127,8 @@ let stratOfTerm term = Builder.(
         let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
             SMap.empty rListEnv in
 
-        let ccStrat = copycat
+        (*FIXME why is the associativity wrong here?! *)
+        let ccStrat = strat_assocLeft @@ copycat
             (gameOfType [] @@ typeOf env lTerm) in
         
         let parStrat = 
@@ -159,7 +160,26 @@ let stratOfTerm term = Builder.(
             
             let lStrat = doBuild lListEnv lEnv lTerm
             and rStrat = doBuild rListEnv rEnv rTerm in
-            let parStrat = strat_reassoc (lStrat ||| rStrat)
+            let parStrat = match lListEnv,rListEnv with
+            | [],[] -> lStrat ||| rStrat
+            | _,[] ->
+                strat_reassoc (lStrat ||| rStrat)
+                    (TreeNode(
+                        TreeNode(TreeLeaf("gamma"),TreeLeaf("A")),
+                        TreeLeaf("B")))
+                    (TreeNode(
+                        TreeLeaf("gamma"),
+                        TreeNode(TreeLeaf("A"),TreeLeaf("B"))))
+            | [],_ ->
+                strat_reassoc (lStrat ||| rStrat)
+                    (TreeNode(
+                        TreeLeaf("A"),
+                        TreeNode(TreeLeaf("gamma"),TreeLeaf("B"))))
+                    (TreeNode(
+                        TreeLeaf("gamma"),
+                        TreeNode(TreeLeaf("A"),TreeLeaf("B"))))
+            | _,_ ->
+                strat_reassoc (lStrat ||| rStrat)
                 (TreeNode(
                     TreeNode(TreeLeaf("gamma"),TreeLeaf("A")),
                     TreeNode(TreeLeaf("delta"),TreeLeaf("B"))))
@@ -181,12 +201,13 @@ let stratOfTerm term = Builder.(
                 TreeNode(mkFinalTree 0 (List.length listEnv),
                     TreeLeaf("right")) in
             
-            strat_reassoc parStrat reassocTree finalTree in
-        
-            
-        (*
-        Printer.dispDebugStrategy ccStrat ;
-        Printer.dispDebugStrategy parStrat ; *)
+                strat_reassoc parStrat reassocTree finalTree in
+    
+        let extropt = function None -> assert false | Some x -> x in
+        Format.eprintf "%a@.===@.%a@.===@."
+            Helpers.dumpGameTree (extropt ccStrat.st_game.g_tree)
+            Helpers.dumpGameTree (extropt parStrat.st_game.g_tree) ;
+
         ccStrat @@@ parStrat
     in
     doBuild [] SMap.empty (LlamHelpers.disambiguate term)
