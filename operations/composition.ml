@@ -34,12 +34,6 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
     let isComposite game =
         game.g_tree = None
         
-    let gameOfParallels parallels = match parallels with
-    | [] -> Builder.game_empty
-    | hd::[] -> hd
-    | hd::tl -> (* Where tl <> [] *)
-        List.fold_left Parallel.parallelGame hd tl
-        
     let compInteraction st1 st2 =
         (match st1.st_game.g_tree, st2.st_game.g_tree with
         | Some(TreeNode _), None
