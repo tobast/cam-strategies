@@ -9,3 +9,4 @@ StratlangParser
 StratlangLexer
 LangReader
 Composition
+ModExtensions

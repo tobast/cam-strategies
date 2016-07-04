@@ -1,2 +1,3 @@
 <operations> or <lang>: include
+<linearlambda/*.cmx>: for-pack(LinearLambda)
 true: use_menhir, use_unix
