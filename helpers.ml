@@ -79,18 +79,10 @@ let rec dispWay fmt way =
     | CompLeft(tl) | CompRight(tl) ->
             Format.fprintf fmt "%s" (wayChr way) ; dispWay fmt tl
 
-let dumpTreeStructure fmt tree =
-    let dispPol fmt = function
-        | PolPos -> Format.fprintf fmt "+"
-        | PolNeg -> Format.fprintf fmt "-"
-        | PolNeutral -> () in
+let dumpTreeWith dumper fmt tree =
     let rec doDump = function
-        | TreeLeaf game ->
-                let pickedName,pickedPol = (try
-                        let pickNd=NodeSet.choose game.g_esp.evts in
-                        pickNd.nodeName, (NodeMap.find pickNd game.g_esp.pol)
-                    with Not_found -> "ø",PolNeutral) in
-                Format.fprintf fmt " o %s (%a)@]" pickedName dispPol pickedPol
+        | TreeLeaf leaf ->
+                Format.fprintf fmt " o %a@]" dumper leaf
         | TreeNode(l,r) ->
                 Format.fprintf fmt "@,|—@[<v 1>";
                 doDump l ;
@@ -101,4 +93,20 @@ let dumpTreeStructure fmt tree =
     Format.fprintf fmt "@[<v 0>" ;
     doDump tree ;
     Format.fprintf fmt "@."
+    
+let dumpTreeStructure fmt tree = dumpTreeWith
+    (fun _ _ -> ()) fmt tree
+    
+let dumpGameTree fmt tree =
+    let dispPol fmt = function
+        | PolPos -> Format.fprintf fmt "+"
+        | PolNeg -> Format.fprintf fmt "-"
+        | PolNeutral -> () in
+    dumpTreeWith (fun fmt game ->
+        let pickedName,pickedPol = (try
+                let pickNd=NodeSet.choose game.g_esp.evts in
+                pickNd.nodeName, (NodeMap.find pickNd game.g_esp.pol)
+            with Not_found -> "ø",PolNeutral) in
+        Format.fprintf fmt " %s (%a)" pickedName dispPol pickedPol)
+        fmt tree
     

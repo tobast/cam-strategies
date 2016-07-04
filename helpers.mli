@@ -62,9 +62,16 @@ val selfNodeMap : NodeSet.t -> dagNode NodeMap.t
 *)
 val eventsEqual : dagNode -> dagNode -> bool
 
+(** Dumps a tree, which is not necessarily a game tree. *)
+val dumpTreeStructure : Format.formatter -> 'a binTreeStruct -> unit
+
+(** Dumps a tree, calling a given function on its leaves. *)
+val dumpTreeWith : (Format.formatter -> 'a -> unit) ->
+    Format.formatter -> 'a binTreeStruct -> unit
+
 (** Dumps a game tree structure (picking a random event name to represent
     a leaf). *)
-val dumpTreeStructure : Format.formatter -> game binTreeStruct -> unit
+val dumpGameTree : Format.formatter -> game binTreeStruct -> unit
 
 (** Displays a given way *)
 val dispWay : Format.formatter -> compWay -> unit
