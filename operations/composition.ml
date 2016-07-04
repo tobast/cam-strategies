@@ -48,17 +48,17 @@ module Canonical (Pullback : Pullback.S) (Parallel : Parallel.S) = struct
         | None, _ | Some(TreeLeaf _), _ ->
                 raise @@ NotComposed st1.st_game
                 
-        | Some (TreeNode(leftTree, midTree1)),
-          Some (TreeNode(midTree2, rightTree)) ->
+        | Some (TreeNode(midTree2, rightTree)),
+          Some (TreeNode(leftTree, midTree1)) ->
             if not @@ Helpers.treesEqualityNoPol midTree1 midTree2 then
                 raise MismatchedGames;
                 
-            let leftGame = Builder.game_extractLeft st1.st_game
-            and rightGame= Builder.game_extractRight st2.st_game in
+            let leftGame = Builder.game_extractLeft st2.st_game
+            and rightGame= Builder.game_extractRight st1.st_game in
             Pullback.pullback
-                (Parallel.parallelStrat st1 (Builder.strat_id rightGame))
+                (Parallel.parallelStrat st2 (Builder.strat_id rightGame))
                 (Builder.strat_assocLeft
-                    (Parallel.parallelStrat (Builder.strat_id leftGame) st2))
+                    (Parallel.parallelStrat (Builder.strat_id leftGame) st1))
         )
         
     let compHidden st1 st2 =

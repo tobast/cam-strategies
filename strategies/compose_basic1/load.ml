@@ -40,7 +40,7 @@ let () =
 
 module Comp = Composition.Canonical (Pullback.Canonical) (Parallel.Canonical)
 
-let stratCompoHidden = stratAB @@@ stratBC
-and stratCompo = stratAB *** stratBC
+let stratCompoHidden = stratBC @@@ stratAB
+and stratCompo = stratBC *** stratAB
     
 let () = Printer.dispDebugStrategy (stratCompoHidden ||| stratCompo)

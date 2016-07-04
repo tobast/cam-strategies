@@ -13,7 +13,7 @@ let gmA2 = Builder.game_copy gmA
 let nodeByName map name = SMap.find name map
 
 let gmPA_B = perpA |||: gmB
-let stratPA_B, namesPA_B = Builder.strat_newFilled_mapped gmPA_B
+let stratPA_B, namesPA_B = Builder.strat_newFilled_namemapped gmPA_B
 let () =
     Builder.strat_addEdge (nodeByName namesPA_B "Apos2")
         (nodeByName namesPA_B "Aneg") ;
@@ -27,7 +27,7 @@ let () =
         (nodeByName namesPA_B "Aneg")
         
 let gmPB_A = perpB |||: gmA
-let stratPB_A, namesPB_A = Builder.strat_newFilled_mapped gmPB_A
+let stratPB_A, namesPB_A = Builder.strat_newFilled_namemapped gmPB_A
 let () =
     Builder.strat_addEdge (nodeByName namesPB_A "Bpos")
         (nodeByName namesPB_A "Apos1") ;
@@ -43,4 +43,4 @@ let () =
 (*let () = Printer.dotDebugOfStrategy Format.std_formatter stratCompo*)
 let () =
 (*    Printer.dispDebugStrategy (stratPA_B *** stratPB_A) ; *)
-    Printer.dispDebugStrategy (stratPA_B @@@ stratPB_A)
+    Printer.dispDebugStrategy (stratPB_A @@@ stratPA_B )
