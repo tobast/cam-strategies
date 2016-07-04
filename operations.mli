@@ -46,6 +46,15 @@ module type S = sig
     (** Copycat strategy of a game. *)
     val copycat : game -> strategy
     
+    type copycatSide = CcLeft | CcRight
+    
+    (** Copycat strategy, where strategy events bear the names given by
+        a function, based on its node in the new game and its side on
+        the copycat. {b Warning}: the function receives the node in the
+        {e new} game, which is {e not} the node in the given game.
+    *)
+    val copycat_named : (dagNode -> copycatSide -> string) -> game -> strategy
+    
     (** {6 Pullback} *)
     
     (** Pullback of two strategies on the same game. *)

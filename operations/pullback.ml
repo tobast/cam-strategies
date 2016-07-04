@@ -109,7 +109,15 @@ module BottomUp = struct
             let sEv2 = NodeMap.find cEvt invmap2 in
             let name = if sEv1.nodeName = sEv2.nodeName
                 then sEv1.nodeName
-                else sEv1.nodeName ^","^sEv2.nodeName in
+                else (match sEv1.nodeName=cEvt.nodeName,
+                        sEv2.nodeName=cEvt.nodeName with
+                    | false,false -> sEv1.nodeName ^","^sEv2.nodeName
+                    | false,true -> sEv1.nodeName
+                    | true,false -> sEv2.nodeName
+                    | true,true -> assert false (*dealed with by "then" *)
+                )
+            in
+            
             let nNode, nPb = Builder.strat_addNamedEvent name cEvt cPb in 
             
             let evtDeps = NodeSet.fold (fun evt cur ->

@@ -569,11 +569,11 @@ let strat_addEvents nEvts strat =
         
 let strat_addEdge = esp_addEdge
 
-let strat_newFilled_mapped game =
+let strat_newFilled_named_mapped game namer =
     let strat = strat_new game in
     let ndMap, evMap, nStrat = NodeSet.fold
         (fun nd (ndMap, curMap,curStrat) ->
-            let nEvt,nStrat = strat_addNamedEvent nd.nodeName nd curStrat in
+            let nEvt,nStrat = strat_addNamedEvent (namer nd) nd curStrat in
             NodeMap.add nd nEvt ndMap,
                 NodeMap.add nd nEvt curMap,
                 nStrat
@@ -586,6 +586,9 @@ let strat_newFilled_mapped game =
         game.g_esp.evts ;
 
     nStrat, ndMap
+    
+let strat_newFilled_mapped game =
+    strat_newFilled_named_mapped game (fun nd -> nd.nodeName)
 
 let strat_newFilled_namemapped game =
     let strat,ndMap = strat_newFilled_mapped game in

@@ -75,7 +75,9 @@ let dotOfEdges ?attr:(attr="") fmt dotIdOf =
 let dotOfStrategy fmt strat =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
-                (getGameNode nd strat).nodeName
+                (if nd.nodeName <> ""
+                    then nd.nodeName
+                    else (getGameNode nd strat).nodeName)
                 nd (getPolarity nd strat.st_strat) ""
             ) strat.st_strat.evts
     in

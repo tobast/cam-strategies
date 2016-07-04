@@ -20,6 +20,8 @@ open Datatypes
 module type S = sig
     val perp : game -> game
     val copycat : game -> strategy
+    type copycatSide = CcLeft | CcRight
+    val copycat_named : (dagNode -> copycatSide -> string) -> game -> strategy
     val (&&&) : strategy -> strategy -> strategy
     val (|||:) : game -> game -> game
     val (|||:~) : game -> game -> game * dagNode NodeMap.t * dagNode NodeMap.t
@@ -65,10 +67,17 @@ module Make
     let ( @@@ ) = Compose.compHidden
     
     exception ExnNeutral
-    let copycat game =
+    type copycatSide = CcLeft | CcRight
+    
+    let copycat_named namer game =
         let pGame = perp game in
         let nGame, leftMap, rightMap = pGame |||:~ game in
-        let strat,stratMap = Builder.strat_newFilled_mapped nGame in
+        let strat,stratMap = Builder.strat_newFilled_named_mapped nGame
+            (fun nd -> match nd.nodeId with
+            | CompId(CompLeft(_), _) -> namer nd CcLeft
+            | CompId(CompRight(_),_) -> namer nd CcRight
+            | CompId(CompBase,_) -> assert false)
+            in
         NodeSet.iter (fun nd -> (try
             let fromMap,toMap = (match Helpers.getPolarity nd game.g_esp with
                 | PolPos -> leftMap,rightMap
@@ -81,6 +90,9 @@ module Make
                 
             with ExnNeutral -> ())) game.g_esp.evts ;
         strat
+        
+    let copycat game =
+        copycat_named (fun nd _ -> nd.nodeName) game
 end
 
 

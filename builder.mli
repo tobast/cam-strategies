@@ -196,6 +196,11 @@ val strat_new : game -> strategy
     edges of the game. Also returns a map of game nodes to strategy nodes. *)
 val strat_newFilled_mapped : game -> strategy * dagNode NodeMap.t
 
+(** Same as {!strat_newFilled_mapped}, but names the strategy nodes
+    based on the output of its second parameter. *)
+val strat_newFilled_named_mapped : game -> (dagNode -> string) ->
+    strategy * dagNode NodeMap.t
+
 (** Same as {!strat_newFilled_mapped}, but the map maps game node names to
     strategy nodes. *)
 val strat_newFilled_namemapped : game -> strategy * dagNode SMap.t

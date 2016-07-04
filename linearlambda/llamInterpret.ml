@@ -116,23 +116,27 @@ let stratOfTerm term = Builder.(
         (match listEnv with
         | (var,_)::[] -> assert(v=var)
         | _ -> assert false) ;
-        copycat (gameOfType [] @@ findType env v)
+        let namer _ = function
+        | CcLeft -> (v^" [env]")
+        | CcRight -> (v)
+        in
+        copycat_named namer (gameOfType [] @@ findType env v),
+            v
     | LamAbs(v,vTyp,absTerm) ->
+        let absStrat, absName =
+            doBuild ((v,vTyp)::listEnv) (SMap.add v vTyp env) absTerm in
         (if listEnv = []
             then (fun x -> x)
-            else strat_assocRight) @@
-            doBuild ((v,vTyp)::listEnv) (SMap.add v vTyp env) absTerm
+            else strat_assocRight) absStrat,
+        ("λ"^v^"·"^absName)
     | LamApp(lTerm,rTerm) ->
         let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
         let lEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
             SMap.empty lListEnv in
         let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
             SMap.empty rListEnv in
-
-        let ccStrat = strat_assocLeft @@ copycat
-            (gameOfType [] @@ typeOf env lTerm) in
         
-        let parStrat = 
+        let parStrat, lName, rName = 
             let mkEnvOrder =
                 let rec idOf name cPos = function
                 | [] -> raise Not_found
@@ -159,8 +163,8 @@ let stratOfTerm term = Builder.(
             | k -> TreeNode(mkFinalTree (cId+1) (k-1),
                 TreeLeaf(string_of_int cId)) in
             
-            let lStrat = doBuild lListEnv lEnv lTerm
-            and rStrat = doBuild rListEnv rEnv rTerm in
+            let lStrat, lName = doBuild lListEnv lEnv lTerm
+            and rStrat, rName = doBuild rListEnv rEnv rTerm in
             let parStrat = match lListEnv,rListEnv with
             | [],[] -> lStrat ||| rStrat
             | _,[] ->
@@ -202,10 +206,20 @@ let stratOfTerm term = Builder.(
                 TreeNode(mkFinalTree 0 (List.length listEnv),
                     TreeLeaf("right")) in
             
-            strat_reassoc parStrat reassocTree finalTree in
+            strat_reassoc parStrat reassocTree finalTree, lName, rName in
+        
+        let ccStrat = strat_assocLeft @@
+            copycat_named
+                (fun nd _ -> match nd.nodeId with
+                    | CompId(CompRight(_), _) -> lName ^ " " ^ rName
+                    | CompId(CompLeft(CompLeft(_)),_) -> lName
+                    | CompId(CompLeft(CompRight(_)),_) -> rName
+                    | CompId(_) -> assert false)
+                (gameOfType [] @@ typeOf env lTerm) in
     
-        ccStrat @@@ parStrat
+        ccStrat @@@ parStrat, (lName ^ " " ^ rName)
     in
-    doBuild [] SMap.empty (LlamHelpers.disambiguate term)
+    
+    fst @@ doBuild [] SMap.empty (LlamHelpers.disambiguate term)
 )
 
