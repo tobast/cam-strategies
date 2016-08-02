@@ -21,17 +21,27 @@ open Operations.Canonical
 
 exception UnboundVar of lamVar
 exception BadTyping of lamTerm
+exception BadCcsTyping of ccsTerm
 exception NonLinearTerm
 
 let findType env v =
     (try SMap.find v env
     with Not_found -> raise @@ UnboundVar v)
 
-let rec expandType env typ = match typ with
-| LamAtom(t) ->
-    (try expandType env (SMap.find t env)
-    with Not_found -> typ)
-| LamArrow(l,r) -> LamArrow(expandType env l, expandType env r)
+let rec ccsTypeOf env term = match term with
+| CcsZero -> CcsProg
+| CcsOne -> CcsProg
+| CcsVar(v) -> findType env v
+| CcsParallel(l,r) ->
+    (match (ccsTypeOf env l, ccsTypeOf env r) with
+    | CcsProg,CcsProg -> CcsProg
+    | _,_ -> raise @@ BadCcsTyping(term))
+| CcsSeq(l,r) ->
+    (match (ccsTypeOf env l, ccsTypeOf env r) with
+    | CcsProg,CcsProg | CcsChan,CcsProg -> CcsProg
+    | _,_ -> raise @@ BadCcsTyping(term))
+| CcsNew(v,t) ->
+    (match (ccsTypeOf (SMap.add v 
 
 let rec typeOf env term = match term with
 | LamVar v -> findType env v
@@ -47,6 +57,14 @@ let rec typeOf env term = match term with
     | _ -> raise @@ BadTyping(term))
 | LamAbs(v, vTyp, absTerm) ->
     LamArrow(vTyp, typeOf (SMap.add v vTyp env) absTerm)
+| LamTensor(l,r) ->
+    LamTensorType(typeOf env l, typeOf env r)
+| LamCcs(ccs) ->
+    let filterEnv = SMap.fold (fun k typ cMap ->
+        (match typ with
+        | LamCcsType(ccsTyp) -> SMap.add k ccsTyp cMap
+        | _ -> cMap)) in
+    LamCcsType(ccsTypeOf (filterEnv env) ccs)
 
 let typeOfTerm term = typeOf SMap.empty term
 

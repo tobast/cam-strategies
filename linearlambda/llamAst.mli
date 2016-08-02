@@ -16,16 +16,36 @@
  *)
 
 type lamVar = string
-type lamAtomic = string
+type ccsVar = string
+
+type ccsType =
+    CcsProg
+  | CcsChan
+
+type ccsChan =
+    CcsCh of string
+  | CcsOppCh of string
+
+type ccsTerm =
+    CcsZero
+  | CcsOne
+  | CcsVarProg of ccsVar
+  | CcsParallel of ccsTerm * ccsTerm
+  | CcsSeq of ccsTerm * ccsTerm
+  | CcsCallChan of ccsChan * ccsTerm
+  | CcsNew of ccsVar * ccsTerm
 
 type lamType =
-    LamAtom of lamAtomic
+    LamCcsType of ccsType
+  | LamTensorType of lamType * lamType (* a * b *)
   | LamArrow of lamType * lamType (* a -> b *)
 
 type lamTerm =
-    LamVar of lamVar                (* x *)
+    LamCcs of ccsTerm
+  | LamVar of lamVar
   | LamApp of lamTerm * lamTerm     (* M N *)
   | LamAbs of lamVar * lamType * lamTerm      (* λx : τ . M *)
+  | LamTensor of lamTerm * lamTerm (* M * N *)
 
 type typeEnv = lamType Datatypes.SMap.t
 
