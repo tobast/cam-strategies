@@ -1,16 +1,16 @@
 (*
  *  Strategies interpreter
- * 
+ *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation, either version 3 of the License, or
  *	(at your option) any later version.
- *	
+ *
  *	This program is distributed in the hope that it will be useful,
  *	but WITHOUT ANY WARRANTY; without even the implied warranty of
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
- *	
+ *
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
@@ -26,7 +26,7 @@ exception NonLinearTerm
 let findType env v =
     (try SMap.find v env
     with Not_found -> raise @@ UnboundVar v)
-    
+
 let rec expandType env typ = match typ with
 | LamAtom(t) ->
     (try expandType env (SMap.find t env)
@@ -49,7 +49,7 @@ let rec typeOf env term = match term with
     LamArrow(vTyp, typeOf (SMap.add v vTyp env) absTerm)
 
 let typeOfTerm term = typeOf SMap.empty term
-    
+
 let gameOfType =
     let gameEnv = ref SMap.empty in
     (fun envList typ ->
@@ -101,7 +101,7 @@ let splitEnv env lTerm rTerm =
             digEnv curEnv toSplit alreadyExtracted unwatched lTerm in
         digEnv nEnv nToSplit nExtracted unwatched rTerm
     in
-    
+
     let lEnv, nEnv, extracted =
         digEnv [] env SSet.empty SSet.empty lTerm in
     let rEnv, finalEnv, _ =
@@ -135,8 +135,8 @@ let stratOfTerm term = Builder.(
             SMap.empty lListEnv in
         let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
             SMap.empty rListEnv in
-        
-        let parStrat, lName, rName = 
+
+        let parStrat, lName, rName =
             let mkEnvOrder =
                 let rec idOf name cPos = function
                 | [] -> raise Not_found
@@ -149,7 +149,7 @@ let stratOfTerm term = Builder.(
             in
             let lEnvOrder = mkEnvOrder lListEnv
             and rEnvOrder = mkEnvOrder rListEnv in
-            
+
             let rec mkReassocTree labels =
                 let mkLabel pos = TreeLeaf(string_of_int pos) in
                 match labels with
@@ -162,7 +162,7 @@ let stratOfTerm term = Builder.(
             | 1 -> TreeLeaf(string_of_int cId)
             | k -> TreeNode(mkFinalTree (cId+1) (k-1),
                 TreeLeaf(string_of_int cId)) in
-            
+
             let lStrat, lName = doBuild lListEnv lEnv lTerm
             and rStrat, rName = doBuild rListEnv rEnv rTerm in
             let parStrat = match lListEnv,rListEnv with
@@ -191,7 +191,7 @@ let stratOfTerm term = Builder.(
                 (TreeNode(
                     TreeNode(TreeLeaf("gamma"),TreeLeaf("delta")),
                     TreeNode(TreeLeaf("A"),TreeLeaf("B")))) in
-            
+
             let reassocTree,finalTree = match lEnvOrder,rEnvOrder with
             | [],[] ->
                 TreeLeaf("A"),TreeNode(TreeLeaf("EMPTY"),TreeLeaf("A"))
@@ -205,9 +205,9 @@ let stratOfTerm term = Builder.(
                     mkReassocTree rEnvOrder), TreeLeaf("right")),
                 TreeNode(mkFinalTree 0 (List.length listEnv),
                     TreeLeaf("right")) in
-            
+
             strat_reassoc parStrat reassocTree finalTree, lName, rName in
-        
+
         let ccStrat = strat_assocLeft @@
             copycat_named
                 (fun nd _ -> match nd.nodeId with
@@ -216,10 +216,10 @@ let stratOfTerm term = Builder.(
                     | CompId(CompLeft(CompRight(_)),_) -> rName
                     | CompId(_) -> assert false)
                 (gameOfType [] @@ typeOf env lTerm) in
-    
+
         ccStrat @@@ parStrat, (lName ^ " " ^ rName)
     in
-    
+
     fst @@ doBuild [] SMap.empty (LlamHelpers.disambiguate term)
 )
 

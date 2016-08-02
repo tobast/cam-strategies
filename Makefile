@@ -40,11 +40,11 @@ TL_OPEN_CMD= $(patsubst %,-open %,$(TL_OPENED_MODULES))
 TL_INCLUDE_CMD= $(patsubst %,-I $(BUILD)%,$(INCLUDEDIRS))
 
 all: $(TARGET) $(TARGET_BYTE) doc
-	
+
 debug: $(TARGET_DBG)
-	
+
 doc: $(DOC)
-	
+
 .PHONY: buildanyway_
 buildanyway_: ;
 
@@ -53,7 +53,7 @@ buildanyway_: ;
 
 %.native: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
-	
+
 %.byte: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 
@@ -62,7 +62,7 @@ buildanyway_: ;
 
 %.d.byte: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
-	
+
 clean:
 	$(OCB) -clean
 

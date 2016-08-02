@@ -1,16 +1,16 @@
 (*
  *  Strategies interpreter
- * 
+ *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation, either version 3 of the License, or
  *	(at your option) any later version.
- *	
+ *
  *	This program is distributed in the hope that it will be useful,
  *	but WITHOUT ANY WARRANTY; without even the implied warranty of
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
- *	
+ *
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
@@ -42,10 +42,10 @@ module BottomUp = struct
          *)
         (* Copy: makes it possible to reuse the nodes directly on the pullback
          * and to use them on a map all together. *)
-        
+
         if not @@ Helpers.gamesEqualityNoPol s1.st_game s2.st_game then
             raise MismatchedGames;
-        
+
         (* Merge polarity inconsistencies as neutral *)
         let mergedPols = NodeMap.merge (fun _ x y -> match x,y with
             | None,None -> None
@@ -63,17 +63,17 @@ module BottomUp = struct
         let cs1 = Builder.strat_copy s1
         and cs2 = (* Builder.strat_copy *) s2 in
         let eventsSet = NodeSet.union cs1.st_strat.evts cs2.st_strat.evts in
-        
+
         let invmap1 = invertedMapping cs1
         and invmap2 = invertedMapping cs2 in
-        
+
         (* Sets of dependancy: which events the given event depends on? *)
         let origDepSets = NodeSet.fold (fun evt cur ->
                 NodeMap.add evt (List.fold_left (fun cSet cEdge ->
                     NodeSet.add cEdge.edgeSrc cSet)
                     NodeSet.empty evt.nodeInEdges) cur)
             eventsSet NodeMap.empty in
-        
+
         let hasDeps dependancies invmap evt =
             (try
                 let sEvt = NodeMap.find evt invmap in
@@ -83,12 +83,12 @@ module BottomUp = struct
         let hasAnyDeps depSets gEvt =
             hasDeps depSets invmap1 gEvt || hasDeps depSets invmap2 gEvt
         in
-        
+
         let worklist = NodeSet.fold (fun gEvt cur ->
             if not @@ hasAnyDeps origDepSets gEvt
                 then gEvt :: cur
                 else cur) game.g_esp.evts [] in
-        
+
         let rec remDeps strat (deps,newFree) nd = function
         | [] -> deps,newFree
         | hd::tl ->
@@ -98,7 +98,7 @@ module BottomUp = struct
                 if NodeSet.is_empty nDeps && (not @@ NodeSet.is_empty cDeps)
                     then NodeSet.add (Helpers.getGameNode hd strat) newFree
                     else newFree in
-            
+
             remDeps strat ((NodeMap.add hd nDeps deps),nFree) nd tl
         in
 
@@ -117,9 +117,9 @@ module BottomUp = struct
                     | true,true -> assert false (*dealed with by "then" *)
                 )
             in
-            
-            let nNode, nPb = Builder.strat_addNamedEvent name cEvt cPb in 
-            
+
+            let nNode, nPb = Builder.strat_addNamedEvent name cEvt cPb in
+
             let evtDeps = NodeSet.fold (fun evt cur ->
                     NodeSet.add (NodeMap.find evt pbNodesMap) cur)
                 (NodeSet.union
@@ -127,17 +127,17 @@ module BottomUp = struct
                     (NodeMap.find sEv2 origDepSets))
                 NodeSet.empty
             in
-            
+
             NodeSet.iter (fun evt -> Builder.strat_addEdge evt nNode) evtDeps;
-            
+
             let nDepSets,nFree = remDeps cs2
                 (remDeps cs1 (depSets,NodeSet.empty) sEv1
                     (List.map (fun x -> x.edgeDst) sEv1.nodeOutEdges))
                 sEv2 (List.map (fun x -> x.edgeDst) sEv2.nodeOutEdges) in
-            
+
             let nPbMap = NodeMap.add sEv1 nNode
                 (NodeMap.add sEv2 nNode pbNodesMap) in
-            
+
             let nWorklist = NodeSet.fold (fun elt curWL ->
                     if not @@ hasAnyDeps nDepSets elt
                         then elt :: curWL
@@ -145,7 +145,7 @@ module BottomUp = struct
 
             buildPullback nPbMap nDepSets nPb nWorklist
         in
-        
+
         buildPullback NodeMap.empty origDepSets
             (Builder.strat_new game) worklist
 end
