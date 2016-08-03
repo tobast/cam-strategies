@@ -48,20 +48,16 @@ lambdaTerm:
     decls = separated_nonempty_list(Tcomma, absDecl) ;
     Tdot ;
     t = lambdaTerm                       %prec Tdot { makeAbstraction decls t }
-| Tlpar ; l = nonCcsLambdaTerm ; Trpar              { l }
+| Tlpar ; l = lambdaTerm ; Trpar                    { l }
 | l = lambdaTerm ; r = lambdaTerm        %prec appl { LamApp(l,r) }
 | l = lambdaTerm ; Ttensor ; r = lambdaTerm         { LamTensor(l,r) }
-| t = ccsTerm                                       { LamCcs(t) }
-
-nonCcsLambdaTerm:
-| v = Tvar                                          { LamVar(v) }
-| Tlambda ;
-    decls = separated_nonempty_list(Tcomma, absDecl) ;
-    Tdot ;
-    t = lambdaTerm                       %prec Tdot { makeAbstraction decls t }
-| Tlpar ; l = nonCcsLambdaTerm ; Trpar              { l }
-| l = lambdaTerm ; r = lambdaTerm        %prec appl { LamApp(l,r) }
-| l = lambdaTerm ; Ttensor ; r = lambdaTerm         { LamTensor(l,r) }
+| ch = ccsChanVar ; Tdash ; t = lambdaTerm          { CcsCallChan(ch, t)}
+| Tone                                              { CcsOne }
+| Tzero                                             { CcsZero }
+| l = lambdaTerm ; Tparallel ; r = lambdaTerm       { CcsParallel(l,r) }
+| l = lambdaTerm ; Tsemicolon; r = lambdaTerm       { CcsSeq(l,r) }
+| Tlpar; Tnu; v=Tvar; Trpar ; t = lambdaTerm
+                                       %prec Tnu    { CcsNew(v,t) }
 
 absDecl:
 | v=Tvar ; Tcolon ; typ=lambdaType                  { (v,typ) }
@@ -70,24 +66,10 @@ lambdaType:
 | l=lambdaType ; Tarrow ; r=lambdaType    %prec Tarrow
                                                     { LamArrow(l,r) }
 | Tlpar ; typ = lambdaType ; Trpar                  { typ }
-| typ = ccsType                                     { LamCcsType(typ) }
-| l=lambdaType; Ttensor ; r=lambdaType              { LamTensorType(l,r) }
-
-ccsTerm:
-| Tlpar ; t = ccsTerm ; Trpar                       { t }
-| v = Tvar                                          { CcsVarProg(v) }
-| ch = ccsChanVar ; Tdash ; t = ccsTerm             { CcsCallChan(ch, t)}
-| Tone                                              { CcsOne }
-| Tzero                                             { CcsZero }
-| l = ccsTerm ; Tparallel ; r = ccsTerm             { CcsParallel(l,r) }
-| l = ccsTerm ; Tsemicolon; r = ccsTerm             { CcsSeq(l,r) }
-| Tlpar; Tnu; v=Tvar; Trpar ; t = ccsTerm
-                                       %prec Tnu    { CcsNew(v,t) }
-
-ccsChanVar:
-| Ttilde; ch = Tvar                                 { CcsOppCh(v) }
-| ch = Tvar                                         { CcsCh(v) }
-
-ccsType:
 | Tprogtype                                         { CcsProg }
 | Tchantype                                         { CcsChan }
+| l=lambdaType; Ttensor ; r=lambdaType              { LamTensorType(l,r) }
+
+ccsChanVar:
+| Ttilde; ch = Tvar                                 { CcsOppCh(ch) }
+| ch = Tvar                                         { CcsCh(ch) }

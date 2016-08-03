@@ -17,29 +17,20 @@
 
 open LlamAst
 
-let rec printCcsType fmt = function
+let rec printType fmt = function
 | CcsProg -> Format.fprintf fmt "ℙ"
 | CcsChan -> Format.fprintf fmt "ℂ"
-
-let rec printType fmt = function
-| LamCcsType(typ) -> Format.fprintf fmt "%a" printCcsType typ
 | LamTensorType(lt,rt) -> Format.fprintf fmt "%a * %a"
                                             printType lt printType rt
 | LamArrow(l,r) ->
     (match l with
-    | LamCcsType _ -> Format.fprintf fmt "%a → %a" printType l printType r
+    | CcsProg | CcsChan -> Format.fprintf fmt "%a → %a" printType l printType r
     | LamTensorType _
     | LamArrow _ -> Format.fprintf fmt "(%a) → %a" printType l printType r)
 
-let rec printCcs fmt = function
-| CcsZero -> Format.fprintf fmt "0"
-| CcsOne -> Format.fprintf fmt "1"
-| CcsOppVar(x) -> Format.fprintf fmt "¬%s" x
-| CcsVar(x) -> Format.fprintf fmt "%s" x
-| CcsParallel(l,r) -> Format.fprintf fmt "%a || %a" printCcs l printCcs r
-| CcsSeq(l,r) -> Format.fprintf fmt "%a ; %a" printCcs l printCcs r
-| CcsNew(v,t) -> Format.fprintf fmt "(ν%s) %a" v printCcs t
-
+let printChan fmt = function
+| CcsCh(x) -> Format.fprintf fmt "%s" x
+| CcsOppCh(x) -> Format.fprintf fmt "¬%s" x
 
 let rec printLambda fmt = function
 | LamVar(x) -> Format.fprintf fmt "%s" x
@@ -49,6 +40,10 @@ let rec printLambda fmt = function
             v printType typ printLambda t
 | LamTensor(l,r) ->
         Format.fprintf fmt "(%a * %a)" printLambda l printLambda r
-| LamCcs(ccs) ->
-        Format.fprintf fmt "%a" printCcs ccs
+| CcsZero -> Format.fprintf fmt "0"
+| CcsOne -> Format.fprintf fmt "1"
+| CcsCallChan(ch,x) -> Format.fprintf fmt "%a - %a" printChan ch printLambda x
+| CcsParallel(l,r) -> Format.fprintf fmt "%a || %a" printLambda l printLambda r
+| CcsSeq(l,r) -> Format.fprintf fmt "%a ; %a" printLambda l printLambda r
+| CcsNew(v,t) -> Format.fprintf fmt "(ν%s) %a" v printLambda t
 

@@ -18,30 +18,23 @@
 type lamVar = string
 type ccsVar = string
 
-type ccsType =
-    CcsProg
-  | CcsChan
-
 type ccsChan =
     CcsCh of string
   | CcsOppCh of string
 
-type ccsTerm =
-    CcsZero
-  | CcsOne
-  | CcsVarProg of ccsVar
-  | CcsParallel of ccsTerm * ccsTerm
-  | CcsSeq of ccsTerm * ccsTerm
-  | CcsCallChan of ccsChan * ccsTerm
-  | CcsNew of ccsVar * ccsTerm
-
 type lamType =
-    LamCcsType of ccsType
+    CcsProg
+  | CcsChan
   | LamTensorType of lamType * lamType (* a * b *)
   | LamArrow of lamType * lamType (* a -> b *)
 
 type lamTerm =
-    LamCcs of ccsTerm
+    CcsZero
+  | CcsOne
+  | CcsParallel of lamTerm * lamTerm
+  | CcsSeq of lamTerm * lamTerm
+  | CcsCallChan of ccsChan * lamTerm
+  | CcsNew of ccsVar * lamTerm
   | LamVar of lamVar
   | LamApp of lamTerm * lamTerm     (* M N *)
   | LamAbs of lamVar * lamType * lamTerm      (* λx : τ . M *)
