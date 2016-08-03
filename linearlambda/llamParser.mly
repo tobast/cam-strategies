@@ -31,7 +31,7 @@
 %start <LlamAst.lamTerm> term
 
 %right Tarrow
-%nonassoc Tdot Tlambda Tnu
+%nonassoc Tdot Tlambda Tnu Ttilde Tdash
 %nonassoc Tvar Tzero Tone
 %nonassoc Tlpar
 %right Ttensor
@@ -48,10 +48,20 @@ lambdaTerm:
     decls = separated_nonempty_list(Tcomma, absDecl) ;
     Tdot ;
     t = lambdaTerm                       %prec Tdot { makeAbstraction decls t }
-| Tlpar ; l = lambdaTerm ; Trpar                    { l }
+| Tlpar ; l = nonCcsLambdaTerm ; Trpar              { l }
 | l = lambdaTerm ; r = lambdaTerm        %prec appl { LamApp(l,r) }
 | l = lambdaTerm ; Ttensor ; r = lambdaTerm         { LamTensor(l,r) }
 | t = ccsTerm                                       { LamCcs(t) }
+
+nonCcsLambdaTerm:
+| v = Tvar                                          { LamVar(v) }
+| Tlambda ;
+    decls = separated_nonempty_list(Tcomma, absDecl) ;
+    Tdot ;
+    t = lambdaTerm                       %prec Tdot { makeAbstraction decls t }
+| Tlpar ; l = nonCcsLambdaTerm ; Trpar              { l }
+| l = lambdaTerm ; r = lambdaTerm        %prec appl { LamApp(l,r) }
+| l = lambdaTerm ; Ttensor ; r = lambdaTerm         { LamTensor(l,r) }
 
 absDecl:
 | v=Tvar ; Tcolon ; typ=lambdaType                  { (v,typ) }
@@ -64,23 +74,14 @@ lambdaType:
 | l=lambdaType; Ttensor ; r=lambdaType              { LamTensorType(l,r) }
 
 ccsTerm:
-| ch = ccsChanVar ; Tdash ; t = ccsTermNest         { CcsCallChan(ch, t)}
-| Tone                                              { CcsOne }
-| Tzero                                             { CcsZero }
-| l = ccsTermNest ; Tparallel ; r = ccsTermNest     { CcsParallel(l,r) }
-| l = ccsTermNest ; Tsemicolon; r = ccsTermNest     { CcsSeq(l,r) }
-| Tlpar; Tnu; v=Tvar; Trpar ; t = ccsTermNest
-                                       %prec Tnu    { CcsNew(v,t) }
-
-ccsTermNest:
-| Tlpar ; t = ccsTermNest ; Trpar                   { t }
+| Tlpar ; t = ccsTerm ; Trpar                       { t }
 | v = Tvar                                          { CcsVarProg(v) }
-| ch = ccsChanVar ; Tdash ; t = ccsTermNest         { CcsCallChan(ch, t)}
+| ch = ccsChanVar ; Tdash ; t = ccsTerm             { CcsCallChan(ch, t)}
 | Tone                                              { CcsOne }
 | Tzero                                             { CcsZero }
-| l = ccsTermNest ; Tparallel ; r = ccsTermNest     { CcsParallel(l,r) }
-| l = ccsTermNest ; Tsemicolon; r = ccsTermNest     { CcsSeq(l,r) }
-| Tlpar; Tnu; v=Tvar; Trpar ; t = ccsTermNest
+| l = ccsTerm ; Tparallel ; r = ccsTerm             { CcsParallel(l,r) }
+| l = ccsTerm ; Tsemicolon; r = ccsTerm             { CcsSeq(l,r) }
+| Tlpar; Tnu; v=Tvar; Trpar ; t = ccsTerm
                                        %prec Tnu    { CcsNew(v,t) }
 
 ccsChanVar:
