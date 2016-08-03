@@ -20,3 +20,6 @@ val printType : Format.formatter -> LlamAst.lamType -> unit
 
 (** Pretty-printing of a lambda-term. *)
 val printLambda : Format.formatter -> LlamAst.lamTerm -> unit
+
+(** Same as {!printLambda}, but with lots of braces. Debug purpose. *)
+val printLambdaBraced : Format.formatter -> LlamAst.lamTerm -> unit

@@ -29,21 +29,45 @@ let rec printType fmt = function
     | LamArrow _ -> Format.fprintf fmt "(%a) → %a" printType l printType r)
 
 let printChan fmt = function
-| CcsCh(x) -> Format.fprintf fmt "%s" x
-| CcsOppCh(x) -> Format.fprintf fmt "¬%s" x
+| CcsCh(x) -> Format.fprintf fmt "[%s]" x
+| CcsOppCh(x) -> Format.fprintf fmt "[¬%s]" x
+
+let printVar fmt = function
+| StrVar(x) -> Format.fprintf fmt "%s" x
+| ChVar(ch) -> Format.fprintf fmt "%a" printChan ch
 
 let rec printLambda fmt = function
-| LamVar(x) -> Format.fprintf fmt "%s" x
+| LamVar(x) -> Format.fprintf fmt "%a" printVar x
 | LamApp(m,n) -> Format.fprintf fmt "%a %a" printLambda m printLambda n
 | LamAbs(v,typ,t) ->
-        Format.fprintf fmt "(λ%s : %a · %a)"
-            v printType typ printLambda t
+        Format.fprintf fmt "(λ%a : %a · %a)"
+            printVar v printType typ printLambda t
 | LamTensor(l,r) ->
         Format.fprintf fmt "(%a * %a)" printLambda l printLambda r
 | CcsZero -> Format.fprintf fmt "0"
 | CcsOne -> Format.fprintf fmt "1"
-| CcsCallChan(ch,x) -> Format.fprintf fmt "%a - %a" printChan ch printLambda x
-| CcsParallel(l,r) -> Format.fprintf fmt "%a || %a" printLambda l printLambda r
-| CcsSeq(l,r) -> Format.fprintf fmt "%a ; %a" printLambda l printLambda r
-| CcsNew(v,t) -> Format.fprintf fmt "(ν%s) %a" v printLambda t
+| CcsCallChan(ch,x) -> Format.fprintf fmt "%a - (%a)" printChan ch printLambda x
+| CcsParallel(l,r) -> Format.fprintf fmt "(%a) || (%a)" printLambda l printLambda r
+| CcsSeq(l,r) -> Format.fprintf fmt "(%a) ; (%a)" printLambda l printLambda r
+| CcsNew(v,t) -> Format.fprintf fmt "(ν%a) (%a)" printChan v printLambda t
+
+let rec printLambdaBraced fmt = function
+| LamVar(x) -> Format.fprintf fmt "(%a)" printVar x
+| LamApp(m,n) ->
+        Format.fprintf fmt "(%a %a)" printLambdaBraced m printLambdaBraced n
+| LamAbs(v,typ,t) ->
+        Format.fprintf fmt "(λ%a : %a · (%a))"
+            printVar v printType typ printLambdaBraced t
+| LamTensor(l,r) ->
+        Format.fprintf fmt "(%a * %a)" printLambdaBraced l printLambdaBraced r
+| CcsZero -> Format.fprintf fmt "0"
+| CcsOne -> Format.fprintf fmt "1"
+| CcsCallChan(ch,x) ->
+        Format.fprintf fmt "(%a - %a)" printChan ch printLambdaBraced x
+| CcsParallel(l,r) ->
+        Format.fprintf fmt "(%a || %a)" printLambdaBraced l printLambdaBraced r
+| CcsSeq(l,r) ->
+        Format.fprintf fmt "(%a ; %a)" printLambdaBraced l printLambdaBraced r
+| CcsNew(v,t) ->
+        Format.fprintf fmt "((ν%a) %a)" printChan v printLambdaBraced t
 

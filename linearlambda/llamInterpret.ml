@@ -16,32 +16,22 @@
  *)
 
 open LlamAst
+open LlamHelpers
 open Datatypes
 open Operations.Canonical
 
-exception UnboundVar of lamVar
+exception UnboundVar of lccsVar
 exception BadTyping of lamTerm
-exception BadCcsTyping of ccsTerm
 exception NonLinearTerm
 
 let findType env v =
-    (try SMap.find v env
+    (try GVMap.find v env
     with Not_found -> raise @@ UnboundVar v)
 
-let rec ccsTypeOf env term = match term with
-| CcsZero -> CcsProg
-| CcsOne -> CcsProg
-| CcsVar(v) -> findType env v
-| CcsParallel(l,r) ->
-    (match (ccsTypeOf env l, ccsTypeOf env r) with
-    | CcsProg,CcsProg -> CcsProg
-    | _,_ -> raise @@ BadCcsTyping(term))
-| CcsSeq(l,r) ->
-    (match (ccsTypeOf env l, ccsTypeOf env r) with
-    | CcsProg,CcsProg | CcsChan,CcsProg -> CcsProg
-    | _,_ -> raise @@ BadCcsTyping(term))
-| CcsNew(v,t) ->
-    (match (ccsTypeOf (SMap.add v 
+let nameOfVar v = match v with
+| StrVar(x) -> x
+| ChVar(CcsCh(a)) -> a
+| ChVar(CcsOppCh(a)) -> "_"^a
 
 let rec typeOf env term = match term with
 | LamVar v -> findType env v
@@ -56,28 +46,50 @@ let rec typeOf env term = match term with
             raise @@ BadTyping(term)
     | _ -> raise @@ BadTyping(term))
 | LamAbs(v, vTyp, absTerm) ->
-    LamArrow(vTyp, typeOf (SMap.add v vTyp env) absTerm)
+    LamArrow(vTyp, typeOf (GVMap.add v vTyp env) absTerm)
 | LamTensor(l,r) ->
     LamTensorType(typeOf env l, typeOf env r)
-| LamCcs(ccs) ->
-    let filterEnv = SMap.fold (fun k typ cMap ->
-        (match typ with
-        | LamCcsType(ccsTyp) -> SMap.add k ccsTyp cMap
-        | _ -> cMap)) in
-    LamCcsType(ccsTypeOf (filterEnv env) ccs)
+| CcsZero -> CcsProg
+| CcsOne -> CcsProg
+| CcsCallChan(ch, prg) ->
+    (match (findType env (ChVar ch)) with
+    | CcsChan ->
+        let nEnv = GVMap.remove (ChVar ch) env in
+        typeOf nEnv prg
+    | _ -> raise @@ BadTyping term)
+| CcsParallel(l,r) ->
+    (match (typeOf env l, typeOf env r) with
+    | CcsProg,CcsProg -> CcsProg
+    | _,_ -> raise @@ BadTyping(term))
+| CcsSeq(l,r) ->
+    (match (typeOf env l, typeOf env r) with
+    | CcsProg,CcsProg | CcsChan,CcsProg -> CcsProg
+    | _,_ -> raise @@ BadTyping(term))
+| CcsNew(v,t) ->
+    let nEnv = GVMap.add (ChVar(LlamHelpers.oppCh v)) CcsChan
+        (GVMap.add (ChVar(v)) CcsChan env) in
+    typeOf nEnv t
 
-let typeOfTerm term = typeOf SMap.empty term
+let typeOfTerm term = typeOf GVMap.empty term
+
+let progGame, progGameCall, progGameDone, chanGame, chanGameCall, chanGameDone=
+    let mkBaseGame prefix = Builder.(
+        let evCall,g1 = game_addNamedEvent (prefix^"call") PolNeg game_empty in
+        let evDone,g2 = game_addNamedEvent (prefix^"done") PolPos g1 in
+        game_addEdge evCall evDone ;
+        g2, evCall,evDone)
+        in
+    let progGame, pgCall, pgDone = mkBaseGame "P" in
+    let chanGame, cgCall, cgDone = mkBaseGame "C" in
+    progGame, pgCall, pgDone, chanGame, cgCall, cgDone
 
 let gameOfType =
-    let gameEnv = ref SMap.empty in
     (fun envList typ ->
         let rec mkGame typ = Builder.(Operations.Canonical.(match typ with
-        | LamAtom(atom) ->
-            if not @@ SMap.mem atom !gameEnv then
-                gameEnv := SMap.add atom
-                    (snd @@ game_addNamedEvent atom PolNeg game_empty)
-                    !gameEnv ;
-            SMap.find atom !gameEnv
+        | CcsProg -> progGame
+        | CcsChan -> chanGame
+        | LamTensorType(l,r) ->
+            (mkGame l) |||: (mkGame r)
         | LamArrow(l,r) ->
             let lGame = perp @@ mkGame l in
             let rGame = mkGame r in
@@ -99,62 +111,97 @@ let gameOfTerm env term =
     gameOfType env @@ typeOfTerm term
 
 let splitEnv env lTerm rTerm =
-    (* Returns (outEnv, digEnv \ {extracted}, alreadyExtracted u {extracted})*)
-    let rec digEnv curEnv toSplit alreadyExtracted unwatched = function
-    | LamVar(v) ->
+    let consumeVar curEnv toSplit alreadyExtracted unwatched  v =
         if List.mem_assoc v toSplit then (* Extract from environment *)
             (v,(List.assoc v toSplit))::curEnv,
                 List.remove_assoc v toSplit,
-                SSet.add v alreadyExtracted
-        else if SSet.mem v alreadyExtracted then
+                GVSet.add v alreadyExtracted
+        else if GVSet.mem v alreadyExtracted then
             raise NonLinearTerm
-        else if not @@ SSet.mem v unwatched then
+        else if not @@ GVSet.mem v unwatched then
             raise @@ UnboundVar v
         else
             curEnv, toSplit, alreadyExtracted
+    in
+
+    (* Returns (outEnv, digEnv \ {extracted}, alreadyExtracted u {extracted})*)
+    let rec digEnv curEnv toSplit alreadyExtracted unwatched = function
+    | LamVar(v) -> consumeVar curEnv toSplit alreadyExtracted unwatched v
     | LamAbs(v,_,absTerm) ->
-        digEnv curEnv toSplit alreadyExtracted (SSet.add v unwatched) absTerm
-    | LamApp(lTerm,rTerm) ->
+        digEnv curEnv toSplit alreadyExtracted
+            (GVSet.add v unwatched) absTerm
+    | CcsParallel(lTerm,rTerm)
+    | CcsSeq(lTerm, rTerm)
+    | LamApp(lTerm,rTerm)
+    | LamTensor(lTerm,rTerm) ->
         let nEnv, nToSplit, nExtracted =
             digEnv curEnv toSplit alreadyExtracted unwatched lTerm in
         digEnv nEnv nToSplit nExtracted unwatched rTerm
+    | CcsOne
+    | CcsZero -> curEnv, toSplit, alreadyExtracted
+    | CcsCallChan(ch, term) ->
+        let nEnv, nSplit, nAlreadyExtracted =
+            consumeVar curEnv toSplit alreadyExtracted unwatched (ChVar ch) in
+        digEnv nEnv nSplit nAlreadyExtracted unwatched term
+    | CcsNew(ch, term) ->
+        digEnv curEnv toSplit alreadyExtracted
+            (GVSet.add (ChVar ch)
+            (GVSet.add (ChVar (LlamHelpers.oppCh ch)) unwatched)) term
     in
 
     let lEnv, nEnv, extracted =
-        digEnv [] env SSet.empty SSet.empty lTerm in
+        digEnv [] env GVSet.empty GVSet.empty lTerm in
     let rEnv, finalEnv, _ =
-        digEnv [] nEnv extracted SSet.empty rTerm in
+        digEnv [] nEnv extracted GVSet.empty rTerm in
     if finalEnv <> [] then
         raise NonLinearTerm ;
     lEnv,rEnv
 
+let envOfList = List.fold_left
+    (fun cur (v,typ) -> GVMap.add v typ cur)
+    GVMap.empty
+
 let stratOfTerm term = Builder.(
     let rec doBuild  listEnv env term = match term with
+    | CcsZero ->
+        snd @@ strat_addEvent progGameCall @@ strat_new progGame, "0"
+    | CcsOne ->
+        strat_newFilled progGame, "1"
+    | CcsParallel(lTerm, rTerm) -> assert false
+    | CcsSeq(lTerm, rTerm) -> assert false
+    | CcsCallChan(ch, term) -> assert false
+    | CcsNew(ch, term) -> assert false
+    | LamTensor(lTerm, rTerm) ->
+        let lEnvList,rEnvList = splitEnv listEnv lTerm rTerm in
+        let lStrat, lName = doBuild lEnvList (envOfList lEnvList) lTerm in
+        let rStrat, rName = doBuild rEnvList (envOfList rEnvList) rTerm in
+        (lStrat ||| rStrat), lName ^ "*" ^ rName
     | LamVar v ->
         (match listEnv with
         | (var,_)::[] -> assert(v=var)
         | _ -> assert false) ;
         let namer _ = function
-        | CcLeft -> (v^" [env]")
-        | CcRight -> (v)
+        | CcLeft -> ((nameOfVar v)^" [env]")
+        | CcRight -> (nameOfVar v)
         in
         copycat_named namer (gameOfType [] @@ findType env v),
-            v
+            nameOfVar v
     | LamAbs(v,vTyp,absTerm) ->
         let absStrat, absName =
-            doBuild ((v,vTyp)::listEnv) (SMap.add v vTyp env) absTerm in
+            doBuild ((v,vTyp)::listEnv) (GVMap.add v vTyp env)
+                absTerm in
         (if listEnv = []
             then (fun x -> x)
             else strat_assocRight) absStrat,
-        ("λ"^v^"·"^absName)
+        ("λ"^(nameOfVar v) ^"·"^absName)
     | LamApp(lTerm,rTerm) ->
         let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
-        let lEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
-            SMap.empty lListEnv in
-        let rEnv = List.fold_left (fun cur (v,typ) -> SMap.add v typ cur)
-            SMap.empty rListEnv in
+        let lEnv = envOfList lListEnv in
+        let rEnv = envOfList rListEnv in
 
         let parStrat, lName, rName =
+            (** Reorders the environment to obtain clearly distinguished
+             * gamma and delta environments *)
             let mkEnvOrder =
                 let rec idOf name cPos = function
                 | [] -> raise Not_found
@@ -238,6 +285,6 @@ let stratOfTerm term = Builder.(
         ccStrat @@@ parStrat, (lName ^ " " ^ rName)
     in
 
-    fst @@ doBuild [] SMap.empty (LlamHelpers.disambiguate term)
+    fst @@ doBuild [] GVMap.empty (LlamHelpers.disambiguate term)
 )
 

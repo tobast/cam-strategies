@@ -17,25 +17,42 @@
 
 %{
     open LlamAst
+    exception ParseError of string
 
     let makeAbstraction decls term =
         List.fold_right (fun (var,typ) cur -> LamAbs(var,typ, cur))
             decls term
+
+    let oppositeCh = function
+    | CcsCh(x) -> CcsOppCh(x)
+    | CcsOppCh(x) -> CcsCh(x)
+
+    let chkChan isChan typ name =
+        let strOfCase = match isChan with
+        | true -> "must be a channel here."
+        | false -> "cannot be a channel here."
+        in
+        if (isChan && typ <> CcsChan) || (not isChan && typ = CcsChan) then
+            raise @@ ParseError (name ^ " " ^ strOfCase)
+
+    let chName = function
+    | CcsCh(x) | CcsOppCh(x) -> x
 %}
 
 %token Tprogtype Tchantype
 %token Tlpar Trpar Tcomma Tcolon Tsemicolon Tparallel Ttensor Tdot Tarrow
-%token Tlambda Tnu Tone Tzero Tdash Ttilde Teof
+%token Tlbra Trbra Tlambda Tnu Tone Tzero Tdash Ttilde Teof
 %token <string> Tvar
 
 %start <LlamAst.lamTerm> term
 
 %right Tarrow
-%nonassoc Tdot Tlambda Tnu Ttilde Tdash
-%nonassoc Tvar Tzero Tone
+%nonassoc Tnu
+%right Tsemicolon Tparallel
+%nonassoc Tdot Tlambda Tdash
+%nonassoc Tvar Tzero Tone Tlbra
 %nonassoc Tlpar
 %right Ttensor
-%right Tsemicolon Tparallel
 %right appl
 %%
 
@@ -43,7 +60,8 @@ term:
     l=lambdaTerm ; Teof                             { l }
 
 lambdaTerm:
-| v = Tvar                                          { LamVar(v) }
+| v = Tvar                                          { LamVar(StrVar(v)) }
+| cv = ccsChanVar                                   { LamVar(ChVar(cv)) }
 | Tlambda ;
     decls = separated_nonempty_list(Tcomma, absDecl) ;
     Tdot ;
@@ -56,11 +74,15 @@ lambdaTerm:
 | Tzero                                             { CcsZero }
 | l = lambdaTerm ; Tparallel ; r = lambdaTerm       { CcsParallel(l,r) }
 | l = lambdaTerm ; Tsemicolon; r = lambdaTerm       { CcsSeq(l,r) }
-| Tlpar; Tnu; v=Tvar; Trpar ; t = lambdaTerm
+| Tlpar; Tnu; v=ccsChanVar; Trpar ; t = lambdaTerm
                                        %prec Tnu    { CcsNew(v,t) }
 
 absDecl:
-| v=Tvar ; Tcolon ; typ=lambdaType                  { (v,typ) }
+| v=Tvar ; Tcolon ; typ=lambdaType                  { chkChan false typ v ;
+                                                        (StrVar v,typ) }
+| v = ccsChanVar ; Tcolon ; typ=lambdaType          { chkChan true typ
+                                                        (chName v) ;
+                                                        (ChVar v,typ) }
 
 lambdaType:
 | l=lambdaType ; Tarrow ; r=lambdaType    %prec Tarrow
@@ -71,5 +93,8 @@ lambdaType:
 | l=lambdaType; Ttensor ; r=lambdaType              { LamTensorType(l,r) }
 
 ccsChanVar:
-| Ttilde; ch = Tvar                                 { CcsOppCh(ch) }
+| Tlbra; ch = ccsInnerChanVar ; Trbra               { ch }
+
+ccsInnerChanVar:
+| Ttilde; ch = ccsInnerChanVar                      { oppositeCh ch }
 | ch = Tvar                                         { CcsCh(ch) }

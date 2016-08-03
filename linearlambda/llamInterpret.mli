@@ -21,13 +21,10 @@ open LlamAst
 open Datatypes
 
 (** Raised if a variable has no assigned type. *)
-exception UnboundVar of lamVar
+exception UnboundVar of lccsVar
 
 (** Raised if a term cannot be typed. *)
 exception BadTyping of lamTerm
-
-(** Raised if a CCS term cannot be typed. *)
-exception BadCcsTyping of ccsTerm
 
 (** Raised if a term is not linear *)
 exception NonLinearTerm

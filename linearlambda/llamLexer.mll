@@ -37,6 +37,8 @@ rule token = parse
 | [' ' '\t']+                   { token lexbuf }
 | '('                           { Tlpar }
 | ')'                           { Trpar }
+| '['                           { Tlbra }
+| ']'                           { Trbra }
 | ','                           { Tcomma }
 | ':'                           { Tcolon }
 | ';'                           { Tsemicolon }

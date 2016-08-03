@@ -15,12 +15,14 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-type lamVar = string
 type ccsVar = string
+type lamVar = string
 
 type ccsChan =
     CcsCh of string
   | CcsOppCh of string
+
+type lccsVar = StrVar of lamVar | ChVar of ccsChan
 
 type lamType =
     CcsProg
@@ -34,10 +36,10 @@ type lamTerm =
   | CcsParallel of lamTerm * lamTerm
   | CcsSeq of lamTerm * lamTerm
   | CcsCallChan of ccsChan * lamTerm
-  | CcsNew of ccsVar * lamTerm
-  | LamVar of lamVar
+  | CcsNew of ccsChan * lamTerm
+  | LamVar of lccsVar
   | LamApp of lamTerm * lamTerm     (* M N *)
-  | LamAbs of lamVar * lamType * lamTerm      (* λx : τ . M *)
+  | LamAbs of lccsVar * lamType * lamTerm      (* λx : τ . M *)
   | LamTensor of lamTerm * lamTerm (* M * N *)
 
 type typeEnv = lamType Datatypes.SMap.t
