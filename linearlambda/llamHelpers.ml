@@ -30,12 +30,40 @@ let disambiguate term =
     | ChVar(CcsCh(x)) -> ChVar(CcsCh(x^"'"))
     | ChVar(CcsOppCh(x)) -> ChVar(CcsOppCh(x^"'"))
     in
+    let unwrapChan = function
+    | ChVar(x) -> x
+    | _ -> assert false
+    in
     let rec newName var seen = match GVSet.mem var seen with
     | true -> newName (addQuote var) seen
     | false -> var
     in
 
     let rec doDisambiguate renameEnv seen = function
+    | CcsZero -> CcsZero, seen
+    | CcsOne -> CcsOne, seen
+    | CcsParallel(lTerm, rTerm) ->
+        let nlTerm, nlSeen = doDisambiguate renameEnv seen lTerm in
+        let nrTerm, nSeen = doDisambiguate renameEnv nlSeen rTerm in
+        CcsParallel(lTerm, rTerm), nSeen
+    | CcsSeq(lTerm, rTerm) ->
+        let nlTerm, nlSeen = doDisambiguate renameEnv seen lTerm in
+        let nrTerm, nSeen = doDisambiguate renameEnv nlSeen rTerm in
+        CcsSeq(lTerm, rTerm), nSeen
+    | CcsCallChan(chan, term) ->
+        let nName = GVMap.find (ChVar chan) renameEnv in
+        let nTerm, nSeen = doDisambiguate renameEnv seen term in
+        CcsCallChan(unwrapChan nName, nTerm), nSeen
+    | CcsNew(chan, term) ->
+        let nName = newName (ChVar chan) seen in
+        let nTerm, nSeen = doDisambiguate
+            (GVMap.add (ChVar chan) nName renameEnv)
+            (GVSet.add nName seen) term in
+        CcsNew(unwrapChan nName, nTerm), nSeen
+    | LamTensor(lTerm, rTerm) ->
+        let nlTerm, nlSeen = doDisambiguate renameEnv seen lTerm in
+        let nrTerm, nSeen = doDisambiguate renameEnv nlSeen rTerm in
+        LamTensor(lTerm, rTerm), nSeen
     | LamVar(v) -> LamVar(GVMap.find v renameEnv),seen
     | LamAbs(v,vTyp,term) ->
         let nName = newName v seen in
