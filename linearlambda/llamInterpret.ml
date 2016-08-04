@@ -23,6 +23,7 @@ open Operations.Canonical
 exception UnboundVar of lccsVar
 exception BadTyping of lamTerm
 exception NonLinearTerm
+exception NotImplemented
 
 let findType env v =
     (try GVMap.find v env
@@ -162,46 +163,19 @@ let envOfList = List.fold_left
     GVMap.empty
 
 let stratOfTerm term = Builder.(
-    let rec doBuild  listEnv env term = match term with
-    | CcsZero ->
-        snd @@ strat_addEvent progGameCall @@ strat_new progGame, "0"
-    | CcsOne ->
-        strat_newFilled progGame, "1"
-    | CcsParallel(lTerm, rTerm) -> assert false
-    | CcsSeq(lTerm, rTerm) -> assert false
-    | CcsCallChan(ch, term) -> assert false
-    | CcsNew(ch, term) -> assert false
-    | LamTensor(lTerm, rTerm) ->
-        let lEnvList,rEnvList = splitEnv listEnv lTerm rTerm in
-        let lStrat, lName = doBuild lEnvList (envOfList lEnvList) lTerm in
-        let rStrat, rName = doBuild rEnvList (envOfList rEnvList) rTerm in
-        (lStrat ||| rStrat), lName ^ "*" ^ rName
-    | LamVar v ->
-        (match listEnv with
-        | (var,_)::[] -> assert(v=var)
-        | _ -> assert false) ;
-        let namer _ = function
-        | CcLeft -> ((nameOfVar v)^" [env]")
-        | CcRight -> (nameOfVar v)
-        in
-        copycat_named namer (gameOfType [] @@ findType env v),
-            nameOfVar v
-    | LamAbs(v,vTyp,absTerm) ->
-        let absStrat, absName =
-            doBuild ((v,vTyp)::listEnv) (GVMap.add v vTyp env)
-                absTerm in
-        (if listEnv = []
-            then (fun x -> x)
-            else strat_assocRight) absStrat,
-        ("λ"^(nameOfVar v) ^"·"^absName)
-    | LamApp(lTerm,rTerm) ->
-        let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
-        let lEnv = envOfList lListEnv in
-        let rEnv = envOfList rListEnv in
+    let rec doBuild  listEnv env term =
+        let parallelOfTwo lTerm rTerm lListEnv rListEnv =
+            (** Creates the strategy corresponding to lTerm ||| rTerm, where
+                both strategies are of the form TreeNode(env, strat),
+                and reorders the strategies so that the output is of the form
+                TreeNode(gEnv, lStrat ||| rStrat) with gEnv reordered to match
+                the order in listEnv.
+                Returns (the strategy described above, lName, rName)
+            *)
 
-        let parStrat, lName, rName =
-            (** Reorders the environment to obtain clearly distinguished
-             * gamma and delta environments *)
+            let lEnv = envOfList lListEnv
+            and rEnv = envOfList rListEnv in
+
             let mkEnvOrder =
                 let rec idOf name cPos = function
                 | [] -> raise Not_found
@@ -273,7 +247,98 @@ let stratOfTerm term = Builder.(
 
             strat_reassoc parStrat reassocTree finalTree, lName, rName in
 
-        let ccStrat = strat_assocLeft @@
+    let composeParallelWith lTerm rTerm cmpStrat assembleNames =
+        let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
+        let parStrat, lName, rName =
+            parallelOfTwo lTerm rTerm lListEnv rListEnv in
+        (*
+        Printer.dispDebugStrategy (cmpStrat lName rName) ;
+        Printer.dispDebugStrategy parStrat ;
+        *)
+        (cmpStrat lName rName) @@@ parStrat, assembleNames lName rName
+    in
+    let concatAssembler mid a b = a ^ mid ^ b in
+
+    let mkTriprogStrat () =
+        let lprogStrat, lprogMap = strat_newFilled_mapped (perp progGame)
+        and rprogStrat, rprogMap = strat_newFilled_mapped (perp progGame)
+        and eprogStrat, eprogMap = strat_newFilled_mapped progGame in
+        let cmp1Strat, l1Map, r1Map = lprogStrat |||~ rprogStrat in
+        let fullStrat, llMap, e1Map = cmp1Strat |||~ eprogStrat in
+        let lMap = Helpers.mapCompose
+            (Helpers.mapCompose lprogMap l1Map) llMap in
+        let rMap = Helpers.mapCompose
+            (Helpers.mapCompose rprogMap r1Map) llMap in
+        let eMap = Helpers.mapCompose eprogMap e1Map in
+        fullStrat, lMap, rMap, eMap
+    in
+
+    match term with
+    | CcsZero ->
+        snd @@ strat_addNamedEvent "Pcall" progGameCall @@ strat_new progGame,
+            "0"
+    | CcsOne ->
+        strat_newFilled progGame, "1"
+    | CcsParallel(lTerm, rTerm) ->
+        let parStrategy lName rName =
+            let fullStrat, lMap, rMap, eMap = mkTriprogStrat () in
+            strat_addEdge
+                (NodeMap.find progGameCall eMap)
+                (NodeMap.find progGameCall lMap) ;
+            strat_addEdge
+                (NodeMap.find progGameCall eMap)
+                (NodeMap.find progGameCall rMap) ;
+            strat_addEdge
+                (NodeMap.find progGameDone lMap)
+                (NodeMap.find progGameDone eMap) ;
+            strat_addEdge
+                (NodeMap.find progGameDone rMap)
+                (NodeMap.find progGameDone eMap) ;
+            fullStrat
+        in
+        composeParallelWith lTerm rTerm parStrategy (concatAssembler " || ")
+    | CcsSeq(lTerm, rTerm) ->
+        let seqStrategy lName rName =
+            let fullStrat, lMap, rMap, eMap = mkTriprogStrat () in
+            strat_addEdge
+                (NodeMap.find progGameCall eMap)
+                (NodeMap.find progGameCall lMap) ;
+            strat_addEdge
+                (NodeMap.find progGameDone lMap)
+                (NodeMap.find progGameCall rMap) ;
+            strat_addEdge
+                (NodeMap.find progGameDone rMap)
+                (NodeMap.find progGameDone eMap) ;
+            fullStrat
+        in
+        composeParallelWith lTerm rTerm seqStrategy (concatAssembler " ; ")
+    | CcsCallChan(ch, term) -> assert false
+    | CcsNew(ch, term) -> assert false
+    | LamTensor(lTerm, rTerm) ->
+        let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
+        let parStrat, lName, rName =
+            parallelOfTwo lTerm rTerm lListEnv rListEnv in
+        parStrat, (lName ^ " " ^ rName)
+    | LamVar v ->
+        (match listEnv with
+        | (var,_)::[] -> assert(v=var)
+        | _ -> assert false) ;
+        let namer _ = function
+        | CcLeft -> ((nameOfVar v)^" [env]")
+        | CcRight -> (nameOfVar v)
+        in
+        copycat_named namer (gameOfType [] @@ findType env v),
+            nameOfVar v
+    | LamAbs(v,vTyp,absTerm) ->
+        let absStrat, absName =
+            doBuild ((v,vTyp)::listEnv) (GVMap.add v vTyp env)
+                absTerm in
+        (if listEnv = []
+            then (fun x -> x)
+            else strat_assocRight) absStrat,
+        ("λ"^(nameOfVar v) ^"·"^absName)
+    | LamApp(lTerm,rTerm) ->
+        let ccStrat lName rName = strat_assocLeft @@
             copycat_named
                 (fun nd _ -> match nd.nodeId with
                     | CompId(CompRight(_), _) -> lName ^ " " ^ rName
@@ -282,7 +347,7 @@ let stratOfTerm term = Builder.(
                     | CompId(_) -> assert false)
                 (gameOfType [] @@ typeOf env lTerm) in
 
-        ccStrat @@@ parStrat, (lName ^ " " ^ rName)
+        composeParallelWith lTerm rTerm ccStrat (concatAssembler " ")
     in
 
     fst @@ doBuild [] GVMap.empty (LlamHelpers.disambiguate term)

@@ -48,8 +48,8 @@
 
 %right Tarrow
 %nonassoc Tnu
-%right Tsemicolon Tparallel
 %nonassoc Tdot Tlambda Tdash
+%right Tsemicolon Tparallel
 %nonassoc Tvar Tzero Tone Tlbra
 %nonassoc Tlpar
 %right Ttensor

@@ -29,6 +29,8 @@ exception BadTyping of lamTerm
 (** Raised if a term is not linear *)
 exception NonLinearTerm
 
+exception NotImplemented
+
 (** [typeOfTerm term]
     retrieves the type of a term. *)
 val typeOfTerm : lamTerm -> lamType
