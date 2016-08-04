@@ -1,16 +1,16 @@
 (*
  *  Strategies interpreter
- * 
+ *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation, either version 3 of the License, or
  *	(at your option) any later version.
- *	
+ *
  *	This program is distributed in the hope that it will be useful,
  *	but WITHOUT ANY WARRANTY; without even the implied warranty of
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
- *	
+ *
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
@@ -28,12 +28,12 @@ val esp_empty : esp
 
 (** Copies an ESP (creates new nodes), also returning a map
  of correspondance between the old and new nodes.
- 
+
  WARNING: does not preserve {!Datatypes.CompId}s well! *)
 val esp_copy_mapped : esp -> esp * dagNode NodeMap.t
 
 (** Copies an ESP (creates new nodes).
- 
+
  WARNING: does not preserve {!Datatypes.CompId}s well! *)
 val esp_copy : esp -> esp
 
@@ -141,19 +141,19 @@ exception BadReassocTree of reassocTree
 (** Enforces associativity and commutativity (up to isomorphism) of games'
     parallel composition by remodelling the tree structure of the compositions
     of a game.
-    
+
     [game_reassoc game fromTree toTree] tries to match [game] with the
     structure of [fromTree], whose leaves must bear unique identifiers,
     and tries to transform this structure into [toTree], whose leaves' labels
     must be a bijective mapping of those of [fromTree].
-    
+
     The special label ["EMPTY"] may be used in [toTree] {b only} to specify
     that an empty game should be added here in the structure (this might be
     useful in some cases, to enforce a particular structure).
-    
+
     The trees do not necessarily have to bear the whole tree structure of
     the parallel composition: a label can stand for a whole part of a tree.
-    
+
     @raise BadTreeStructure if the first tree does not match the game.
     @raise BadReassocTree if one of the [reassocTree]s are badly labeled,
         if the second tree's labels are not in bijective correspondence

@@ -490,6 +490,11 @@ let dag_transitiveClosure dag =
     applyEdgesMatrix dag matr vertOfId
 
 let dag_transitiveReduction dag =
+    let copyMatr2d matr =
+        Array.init (Array.length matr) (fun line ->
+            Array.init (Array.length matr.(line))
+                (fun cell -> matr.(line).(cell)))
+    in
     let pathMatr, _, vertOfId = matrixOfGraph dag in
     floydWarshall pathMatr ;
 
@@ -498,11 +503,12 @@ let dag_transitiveReduction dag =
     for id = 0 to size-1 do
         pathMatr.(id).(id) <- false
     done;
+    let floydMatr = copyMatr2d pathMatr in
     for dep = 0 to size - 1 do
         for mid  = 0 to size - 1 do
-            if pathMatr.(dep).(mid) then
+            if floydMatr.(dep).(mid) then
                 for arr = 0 to size - 1 do
-                    if pathMatr.(mid).(arr) then
+                    if floydMatr.(mid).(arr) then
                         pathMatr.(dep).(arr) <- false
                 done
         done
