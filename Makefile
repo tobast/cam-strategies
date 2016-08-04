@@ -31,12 +31,16 @@ TL_OBJS=\
 TL_OPENED_MODULES=Helpers Datatypes Builder Printer Operations Canonical \
 	LangReader
 
+TL_LLAM_OPENED_MODULES=$(TL_OPENED_MODULES) LinearLambda LlamHelpers \
+	LlamPrinter LlamInterpret
+
 INCLUDEDIRS= . operations lang
 
 ###############################################################################
 
 DOC=$(DOCDIR)/index.html
 TL_OPEN_CMD= $(patsubst %,-open %,$(TL_OPENED_MODULES))
+TL_LLAM_OPEN_CMD= $(patsubst %,-open %,$(TL_LLAM_OPENED_MODULES))
 TL_INCLUDE_CMD= $(patsubst %,-I $(BUILD)%,$(INCLUDEDIRS))
 
 all: $(TARGET) $(TARGET_BYTE) doc
@@ -74,4 +78,7 @@ toplevelcmd: $(TARGET_BYTE)
 
 toplevel: $(TARGET_BYTE)
 	$(OCAML) $(TL_INCLUDE_CMD) $(TL_OPEN_CMD) $(TL_OBJS) $(OBJS)
+
+toplevel-llam: $(TARGET_BYTE)
+	$(OCAML) $(TL_INCLUDE_CMD) $(TL_LLAM_OPEN_CMD) $(TL_OBJS) $(OBJS)
 
