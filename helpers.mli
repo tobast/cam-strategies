@@ -1,16 +1,16 @@
 (*
  *  Strategies interpreter
- * 
+ *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation, either version 3 of the License, or
  *	(at your option) any later version.
- *	
+ *
  *	This program is distributed in the hope that it will be useful,
  *	but WITHOUT ANY WARRANTY; without even the implied warranty of
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
- *	
+ *
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
@@ -75,4 +75,14 @@ val dumpGameTree : Format.formatter -> game binTreeStruct -> unit
 
 (** Displays a given way *)
 val dispWay : Format.formatter -> compWay -> unit
+
+(** Raised by {!mapCompose}. *)
+exception BadMapDomain
+
+(** [mapCompose m1 m2] returns a map where a key [k] of [m1] is mapped to an
+    element [x] of [m2] such that [k] is mapped to [y] in [m1] and [y] is
+    mapped to [x] in [m2].
+    @raise BadMapDomain if no such element exists for a key of [m1].
+*)
+val mapCompose : dagNode NodeMap.t -> 'a NodeMap.t -> 'a NodeMap.t
 
