@@ -89,6 +89,7 @@ module Make
             Builder.strat_addEdge fromNd toNd
 
             with ExnNeutral -> ())) game.g_esp.evts ;
+        Builder.dag_transitiveReduction strat.st_strat.evts ;
         strat
 
     let copycat game =
