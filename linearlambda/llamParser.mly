@@ -48,9 +48,9 @@
 
 %right Tarrow
 %nonassoc Tnu
-%nonassoc Tdot Tlambda Tdash
+%nonassoc Tdot Tlambda
 %right Tsemicolon Tparallel
-%nonassoc Tvar Tzero Tone Tlbra
+%nonassoc Tvar Tzero Tone Tlbra Tdash
 %nonassoc Tlpar
 %right Ttensor
 %right appl
