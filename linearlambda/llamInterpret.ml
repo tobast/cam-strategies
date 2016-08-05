@@ -163,7 +163,7 @@ let envOfList = List.fold_left
     GVMap.empty
 
 let stratOfTerm term = Builder.(
-    let rec doBuild  listEnv env term =
+    let rec doBuild  listEnv env nuChans term =
         let parallelOfTwo lTerm rTerm lListEnv rListEnv =
             (** Creates the strategy corresponding to lTerm ||| rTerm, where
                 both strategies are of the form TreeNode(env, strat),
@@ -202,8 +202,8 @@ let stratOfTerm term = Builder.(
             | k -> TreeNode(mkFinalTree (cId+1) (k-1),
                 TreeLeaf(string_of_int cId)) in
 
-            let lStrat, lName = doBuild lListEnv lEnv lTerm
-            and rStrat, rName = doBuild rListEnv rEnv rTerm in
+            let lStrat, lName = doBuild lListEnv lEnv nuChans lTerm
+            and rStrat, rName = doBuild rListEnv rEnv nuChans rTerm in
             let parStrat = match lListEnv,rListEnv with
             | [],[] -> lStrat ||| rStrat
             | _,[] ->
@@ -247,6 +247,51 @@ let stratOfTerm term = Builder.(
 
             strat_reassoc parStrat reassocTree finalTree, lName, rName in
 
+    let insertInEnvironment strat var =
+        (** Reassocs [strat], a strategy with shape [Gamma || (V || A)],
+            into the shape [Gamma' || A], where [Gamma] is the environment
+            described by the [listEnv] from which [var] is absent, and
+            [Gamma'] is the same environment in which [V] has been inserted
+            where [var] belongs. *)
+        let rec combTree = function
+        | [] -> assert false
+        | hd::[] -> TreeLeaf(string_of_int hd)
+        | hd::tl -> TreeNode(combTree tl, TreeLeaf(string_of_int hd))
+        in
+        let finalCombTree lst =
+            let tree = combTree lst in
+            TreeNode(tree, TreeLeaf("A"))
+        in
+        let rec seq curL fst last =
+            if fst >= last
+                then curL
+                else seq (last::curL) fst (last-1)
+        in
+        let holeySeq last ign =
+            seq (seq [] (ign+1) last) 0 (ign-1) in
+
+        let posInList v lst =
+            let rec doSearch pos = function
+            | [] -> raise Not_found
+            | hd::tl ->
+                if (fst hd) = v
+                    then pos
+                    else doSearch (pos+1) tl
+            in doSearch 0 lst
+        in
+
+        let varPos = posInList var listEnv in
+        let envSize = List.length listEnv in
+
+        if envSize = 1 then (* The environment is only the var *)
+            strat_extractRight strat
+        else
+            let fromTree = TreeNode(combTree @@ holeySeq envSize varPos,
+                TreeNode(TreeLeaf(string_of_int varPos), TreeLeaf("A"))) in
+            let toTree = finalCombTree @@ seq [] 0 envSize in
+            strat_reassoc strat fromTree toTree
+    in
+
     let composeParallelWith lTerm rTerm cmpStrat assembleNames =
         let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
         let parStrat, lName, rName =
@@ -272,13 +317,18 @@ let stratOfTerm term = Builder.(
         let eMap = Helpers.mapCompose eprogMap e1Map in
         fullStrat, lMap, rMap, eMap
     in
+    let addEnv strat =
+        (** Adds an empty environment to strategies without environment. *)
+        (strat_new game_empty) ||| strat
+    in
 
     match term with
     | CcsZero ->
-        snd @@ strat_addNamedEvent "Pcall" progGameCall @@ strat_new progGame,
+        addEnv @@ snd @@ strat_addNamedEvent "Pcall" progGameCall @@
+                strat_new progGame,
             "0"
     | CcsOne ->
-        strat_newFilled progGame, "1"
+        addEnv @@ strat_newFilled progGame, "1"
     | CcsParallel(lTerm, rTerm) ->
         let parStrategy lName rName =
             let fullStrat, lMap, rMap, eMap = mkTriprogStrat () in
@@ -312,8 +362,94 @@ let stratOfTerm term = Builder.(
             fullStrat
         in
         composeParallelWith lTerm rTerm seqStrategy (concatAssembler " ; ")
-    | CcsCallChan(ch, term) -> assert false
-    | CcsNew(ch, term) -> assert false
+    | CcsCallChan(ch, term) ->
+        let chanStrat, lpMap, chMap, eMap =
+            let lprogStrat, lprogMap = strat_newFilled_mapped (perp progGame)
+            and chanStrat, chanMap = strat_newFilled_mapped (perp chanGame)
+            and eprogStrat, eprogMap = strat_newFilled_mapped progGame in
+
+            let cmp1Strat, r1Map, e1Map = chanStrat |||~ eprogStrat in
+            let fullStrat, l1Map, rrMap = lprogStrat |||~ cmp1Strat in
+            let eMap = Helpers.mapCompose
+                (Helpers.mapCompose eprogMap e1Map) rrMap in
+            let rMap = Helpers.mapCompose
+                (Helpers.mapCompose chanMap r1Map) rrMap in
+            let lMap = Helpers.mapCompose lprogMap l1Map in
+            fullStrat, lMap, rMap, eMap in
+        strat_addEdge
+            (NodeMap.find progGameCall eMap)
+            (NodeMap.find chanGameCall chMap) ;
+        strat_addEdge
+            (NodeMap.find chanGameDone chMap)
+            (NodeMap.find progGameCall lpMap) ;
+        strat_addEdge
+            (NodeMap.find progGameDone lpMap)
+            (NodeMap.find progGameDone eMap) ;
+
+
+        let termStrat, tName = doBuild
+            (List.remove_assoc (ChVar ch) listEnv)
+            (GVMap.remove (ChVar ch) env)
+            nuChans term in
+
+        insertInEnvironment (chanStrat @@@ termStrat) (ChVar ch),
+            Format.sprintf "[%s] - %s" (nameOfVar (ChVar ch)) tName
+
+    | CcsNew(ch, term) ->
+        let nuStrat =
+            let lchanStrat, lchanMap = strat_newFilled_mapped chanGame
+            and rchanStrat, rchanMap = strat_newFilled_mapped chanGame in
+            let lprogStrat, lprogMap = strat_newFilled_mapped (perp progGame)
+            and eprogStrat, eprogMap = strat_newFilled_mapped progGame in
+
+            let chanStrat, l1chanMap, r1chanMap = lchanStrat |||~ rchanStrat in
+            let lchMap = Helpers.mapCompose lchanMap l1chanMap
+            and rchMap = Helpers.mapCompose rchanMap r1chanMap in
+
+            let progStrat, l1progMap, e1progMap = lprogStrat |||~ eprogStrat in
+            let lprMap = Helpers.mapCompose lprogMap l1progMap
+            and eprMap = Helpers.mapCompose eprogMap e1progMap in
+
+            strat_addEdge
+                (NodeMap.find chanGameCall lchMap)
+                (NodeMap.find chanGameDone rchMap) ;
+            strat_addEdge
+                (NodeMap.find chanGameCall rchMap)
+                (NodeMap.find chanGameDone lchMap) ;
+            strat_addEdge
+                (NodeMap.find progGameCall eprMap)
+                (NodeMap.find progGameCall lprMap) ;
+            strat_addEdge
+                (NodeMap.find progGameDone lprMap)
+                (NodeMap.find progGameDone eprMap) ;
+
+            let fullStrat = chanStrat ||| progStrat in
+            let fromReassoc = TreeNode(
+                TreeNode(TreeLeaf("C1"),TreeLeaf("C2")),
+                TreeNode(TreeLeaf("P1"),TreeLeaf("PF"))) in
+            let toReassoc = TreeNode(TreeNode(
+                    TreeLeaf("C1"),
+                    TreeNode(TreeLeaf("C2"),TreeLeaf("P1"))),
+                TreeLeaf("PF")) in
+            let outStrat = strat_reassoc fullStrat fromReassoc toReassoc in
+            Builder.dag_transitiveReduction outStrat.st_strat.evts;
+            outStrat in
+
+        let termStrat, tName = doBuild
+            ((ChVar(ch),CcsChan)::(ChVar(LlamHelpers.oppCh ch),CcsChan)::
+                listEnv)
+            (GVMap.add (ChVar ch) CcsChan (
+                GVMap.add (ChVar (LlamHelpers.oppCh ch)) CcsChan env))
+            nuChans term in
+
+        let rotatedStrat =
+            (if listEnv = []
+                then (fun x -> (strat_new game_empty) ||| x)
+                else strat_assocRight) @@
+                strat_assocRight termStrat in
+
+        nuStrat @@@ rotatedStrat,
+            Format.sprintf "(ν[%s]) %s" (nameOfVar (ChVar ch)) tName
     | LamTensor(lTerm, rTerm) ->
         let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
         let parStrat, lName, rName =
@@ -332,7 +468,7 @@ let stratOfTerm term = Builder.(
     | LamAbs(v,vTyp,absTerm) ->
         let absStrat, absName =
             doBuild ((v,vTyp)::listEnv) (GVMap.add v vTyp env)
-                absTerm in
+                nuChans absTerm in
         (if listEnv = []
             then (fun x -> x)
             else strat_assocRight) absStrat,
@@ -350,6 +486,6 @@ let stratOfTerm term = Builder.(
         composeParallelWith lTerm rTerm ccStrat (concatAssembler " ")
     in
 
-    fst @@ doBuild [] GVMap.empty (LlamHelpers.disambiguate term)
+    fst @@ doBuild [] GVMap.empty GVSet.empty (LlamHelpers.disambiguate term)
 )
 

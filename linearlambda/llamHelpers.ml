@@ -24,6 +24,10 @@ module GVMap = Map.Make(struct type t=lccsVar let compare=compare end)
 let lambdaize str =
     LlamParser.term LlamLexer.token (Lexing.from_string str)
 
+let oppCh = function
+| CcsCh(v) -> CcsOppCh(v)
+| CcsOppCh(v) -> CcsCh(v)
+
 let disambiguate term =
     let addQuote var = match var with
     | StrVar(x) -> StrVar(x^"'")
@@ -56,9 +60,11 @@ let disambiguate term =
         CcsCallChan(unwrapChan nName, nTerm), nSeen
     | CcsNew(chan, term) ->
         let nName = newName (ChVar chan) seen in
+        let nNameOpp = newName (ChVar (oppCh chan)) seen in
         let nTerm, nSeen = doDisambiguate
-            (GVMap.add (ChVar chan) nName renameEnv)
-            (GVSet.add nName seen) term in
+            (GVMap.add (ChVar chan) nName
+                (GVMap.add (ChVar (oppCh chan)) nNameOpp renameEnv))
+            (GVSet.add nName (GVSet.add nNameOpp seen)) term in
         CcsNew(unwrapChan nName, nTerm), nSeen
     | LamTensor(lTerm, rTerm) ->
         let nlTerm, nlSeen = doDisambiguate renameEnv seen lTerm in
@@ -76,7 +82,3 @@ let disambiguate term =
         (LamApp(nlTerm, nrTerm), nSeen)
     in
     fst @@ doDisambiguate GVMap.empty GVSet.empty term
-
-let oppCh = function
-| CcsCh(v) -> CcsOppCh(v)
-| CcsOppCh(v) -> CcsCh(v)
