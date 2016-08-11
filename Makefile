@@ -5,11 +5,15 @@ OCB=ocamlbuild
 JS_OF_OCAML=js_of_ocaml
 OCBFLAGS=-use-ocamlfind
 
-TARGET=web/web.js
+WEBDIR=web/
+TARGET=$(WEBDIR)web.js
 TARGET_DBG=main.d.byte
 TARGET_BYTE=main.byte
 DOCDIR=doc.docdir
 BUILD=_build/
+
+REMOTE=www.tobast
+REMOTE_PATH=~/tobast.fr/public_html/l3/
 
 OBJS=\
 	$(BUILD)datatypes.cmo \
@@ -86,4 +90,7 @@ toplevel: $(TARGET_BYTE)
 
 toplevel-llam: $(TARGET_BYTE)
 	$(OCAML) $(TL_INCLUDE_CMD) $(TL_LLAM_OPEN_CMD) $(TL_OBJS) $(OBJS)
+
+upload: $(TARGET)
+	scp -r $(WEBDIR)* $(REMOTE):$(REMOTE_PATH)
 
