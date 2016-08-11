@@ -48,6 +48,11 @@ g .label {
     stroke: red;
 }
 
+.errorhead {
+	color: #c81b1b;
+	font-weight: bold;
+}
+
 pre { overflow: auto; }
 
 

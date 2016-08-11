@@ -1,5 +1,11 @@
 module Html = Dom_html
 
+let escapeHtml fmt str =
+    String.iter (fun chr -> Format.fprintf fmt "%s" @@ match chr with
+        | '<' -> "&lt;"
+        | '>' -> "&gt;"
+        | '\n' -> "<br/>"
+        | c -> String.make 1 c) str
 
 let draw_graph g =
     ignore @@ Js.Unsafe.eval_string (Printf.sprintf "drawDot (%S)" g)
@@ -39,20 +45,22 @@ let init _ =
     let body = Dom_html.getElementById "main" in
     let textbox = Html.createTextarea d in
     let inputbox_outcomes = Html.createInput ~_type: (Js.string "submit") d in
+    let errorbox = Dom_html.getElementById "resulterror" in
 
     let do_outcomes _ =
         (try
             let code = Js.to_string (textbox ## value) in
-            let buff = Buffer.create 512 in
-            let fmt = Format.formatter_of_buffer buff in
-            Printer.dotOfStrategy fmt
+            let dot =
+                Format.asprintf "%a" Printer.dotOfStrategy
                     LinearLambda.(LlamInterpret.stratOfTerm
-                            @@ LlamHelpers.lambdaize @@ code) ;
-            let dot = Buffer.contents buff in
+                            @@ LlamHelpers.lambdaize @@ code) in
             draw_graph dot;
+            errorbox##innerHTML <- Js.string ""
         with e ->
-            ignore @@ Js.Unsafe.eval_string
-                (Format.sprintf "alert(\"%s\");" @@ Printexc.to_string e));
+            draw_graph "digraph {}";
+            errorbox##innerHTML <- Js.string @@
+                Format.asprintf "<span class=\"errorhead\">Error:</span> %a"
+                    escapeHtml (Printexc.to_string e));
         Js._false
     in
 
