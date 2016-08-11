@@ -164,6 +164,11 @@ let envOfList = List.fold_left
 
 let stratOfTerm term = Builder.(
     let rec doBuild  listEnv env nuChans term =
+        let rmEnv = strat_extractRight in
+        let addEnv strat =
+            (** Adds an empty environment to strategies without environment. *)
+            (strat_new game_empty) ||| strat
+        in
         let parallelOfTwo lTerm rTerm lListEnv rListEnv =
             (** Creates the strategy corresponding to lTerm ||| rTerm, where
                 both strategies are of the form TreeNode(env, strat),
@@ -205,9 +210,9 @@ let stratOfTerm term = Builder.(
             let lStrat, lName = doBuild lListEnv lEnv nuChans lTerm
             and rStrat, rName = doBuild rListEnv rEnv nuChans rTerm in
             let parStrat = match lListEnv,rListEnv with
-            | [],[] -> lStrat ||| rStrat
+            | [],[] -> ((rmEnv lStrat) ||| (rmEnv rStrat))
             | _,[] ->
-                strat_reassoc (lStrat ||| rStrat)
+                strat_reassoc (lStrat ||| (rmEnv rStrat))
                     (TreeNode(
                         TreeNode(TreeLeaf("gamma"),TreeLeaf("A")),
                         TreeLeaf("B")))
@@ -215,7 +220,7 @@ let stratOfTerm term = Builder.(
                         TreeLeaf("gamma"),
                         TreeNode(TreeLeaf("A"),TreeLeaf("B"))))
             | [],_ ->
-                strat_reassoc (lStrat ||| rStrat)
+                strat_reassoc ((rmEnv lStrat) ||| rStrat)
                     (TreeNode(
                         TreeLeaf("A"),
                         TreeNode(TreeLeaf("gamma"),TreeLeaf("B"))))
@@ -296,9 +301,13 @@ let stratOfTerm term = Builder.(
         let lListEnv,rListEnv = splitEnv listEnv lTerm rTerm in
         let parStrat, lName, rName =
             parallelOfTwo lTerm rTerm lListEnv rListEnv in
+
         (*
-        Printer.dispDebugStrategy (cmpStrat lName rName) ;
-        Printer.dispDebugStrategy parStrat ;
+        let () =
+            let disp = Printer.dispDebugStrategy in
+            disp (cmpStrat lName rName) ;
+            disp parStrat
+            in
         *)
         (cmpStrat lName rName) @@@ parStrat, assembleNames lName rName
     in
@@ -316,10 +325,6 @@ let stratOfTerm term = Builder.(
             (Helpers.mapCompose rprogMap r1Map) llMap in
         let eMap = Helpers.mapCompose eprogMap e1Map in
         fullStrat, lMap, rMap, eMap
-    in
-    let addEnv strat =
-        (** Adds an empty environment to strategies without environment. *)
-        (strat_new game_empty) ||| strat
     in
 
     match term with
@@ -470,7 +475,7 @@ let stratOfTerm term = Builder.(
             doBuild ((v,vTyp)::listEnv) (GVMap.add v vTyp env)
                 nuChans absTerm in
         (if listEnv = []
-            then (fun x -> x)
+            then addEnv
             else strat_assocRight) absStrat,
         ("λ"^(nameOfVar v) ^"·"^absName)
     | LamApp(lTerm,rTerm) ->
