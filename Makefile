@@ -2,9 +2,10 @@
 OCAML= \
 	$(shell if [ -f ./ocamltop ] ; then cat ./ocamltop; else echo 'ocaml'; fi)
 OCB=ocamlbuild
-OCBFLAGS=
+JS_OF_OCAML=js_of_ocaml
+OCBFLAGS=-use-ocamlfind
 
-TARGET=main.native
+TARGET=web/web.js
 TARGET_DBG=main.d.byte
 TARGET_BYTE=main.byte
 DOCDIR=doc.docdir
@@ -53,7 +54,7 @@ doc: $(DOC)
 buildanyway_: ;
 
 %.docdir/index.html: %.odocl buildanyway_
-	$(OCB) $@
+	$(OCB) $(OCBFLAGS) $@
 
 %.native: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
@@ -67,8 +68,12 @@ buildanyway_: ;
 %.d.byte: %.ml buildanyway_
 	$(OCB) $(OCBFLAGS) $@
 
+%.js: %.byte
+	$(JS_OF_OCAML) -o "$@" $(BUILD)$<
+
 clean:
 	$(OCB) -clean
+	rm -f $(TARGET)
 
 cleandoc:
 	rm -rf _build/$(DOCDIR)

@@ -1,17 +1,17 @@
 
 (*
  *  Strategies interpreter
- * 
+ *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
  *	the Free Software Foundation, either version 3 of the License, or
  *	(at your option) any later version.
- *	
+ *
  *	This program is distributed in the hope that it will be useful,
  *	but WITHOUT ANY WARRANTY; without even the implied warranty of
  *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *	GNU General Public License for more details.
- *	
+ *
  *	You should have received a copy of the GNU General Public License
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
@@ -34,7 +34,7 @@ let formatNodeId fmt = function CompId(comp,x) ->
         Format.fprintf fmt "%d" x
     else
         Format.fprintf fmt "(%a,%d)" printWay comp x
-    
+
 let formatNodeDotId prefix fmt = function CompId(comp,x) ->
     if comp = CompBase then
         Format.fprintf fmt "%s%d" prefix x
@@ -46,10 +46,11 @@ let stdFmtDotId = formatNodeDotId ""
 let dotOfVert ?idFmt:(idFmt=stdFmtDotId) fmt labOverride
         dagNode polarity attr =
     let label = if labOverride = "" then dagNode.nodeName else labOverride in
-    let color = "color = \""^(match polarity with
-        | PolNeg -> "red"
-        | PolNeutral -> "black"
-        | PolPos -> "green")^"\"" in
+    let color = (fun (x,y) -> Format.sprintf "color=\"%s\", class=\"%s\"" x y)
+        (match polarity with
+        | PolNeg -> "red","polneg"
+        | PolNeutral -> "black","polneutral"
+        | PolPos -> "green","polpos") in
     if label = "" then (* Both its label and its override label are empty *)
         Format.fprintf fmt "%a [%s label=\"%a\", %s]@."
             idFmt dagNode.nodeId
@@ -57,21 +58,21 @@ let dotOfVert ?idFmt:(idFmt=stdFmtDotId) fmt labOverride
             formatNodeId dagNode.nodeId
             color
     else
-        Format.fprintf fmt "%a [%s label=\"%s (%a)\",%s]@."
+        Format.fprintf fmt "%a [%s label=\"%s\",%s]@."
             idFmt dagNode.nodeId
             attr
             label
-            formatNodeId dagNode.nodeId
+            (*formatNodeId dagNode.nodeId *)
             color
-            
+
 let dotOfEdges ?attr:(attr="") fmt dotIdOf =
     List.iter (fun edge ->
-        Format.fprintf fmt "%a -> %a [%s]@."
+        Format.fprintf fmt "%a -> %a [class=\"causality\", %s]@."
         dotIdOf edge.edgeSrc.nodeId
         dotIdOf edge.edgeDst.nodeId
         attr)
-    
-            
+
+
 let dotOfStrategy fmt strat =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
@@ -81,18 +82,18 @@ let dotOfStrategy fmt strat =
                 nd (getPolarity nd strat.st_strat) ""
             ) strat.st_strat.evts
     in
-    
+
     let dotedges () =
         let dotIdOf = stdFmtDotId in
         NodeSet.iter (fun nd -> dotOfEdges fmt dotIdOf nd.nodeOutEdges)
             strat.st_strat.evts
     in
-    
+
     Format.fprintf fmt "digraph {@." ;
     dotverts () ;
     dotedges () ;
     Format.fprintf fmt "}@."
-    
+
 let dotOfGame fmt game =
     let dotverts () =
         NodeSet.iter (fun nd -> dotOfVert fmt
@@ -105,12 +106,12 @@ let dotOfGame fmt game =
         NodeSet.iter (fun nd -> dotOfEdges fmt dotIdOf nd.nodeOutEdges)
             game.g_esp.evts
     in
-    
+
     Format.fprintf fmt "digraph {@.";
     dotverts ();
     dotedges ();
     Format.fprintf fmt "}@."
-    
+
 let dotDebugOfStrategy fmt strat =
     (* Print the game as boxed nodes, the strategy as round nodes,
        the map between the two as blue dotted arrows.
@@ -129,7 +130,7 @@ let dotDebugOfStrategy fmt strat =
     in
     let mapEdges dotIdFrom dotIdTo attributes map =
         NodeMap.iter (fun fromEvt toEvt ->
-            Format.fprintf fmt "%a -> %a [%s]@."
+            Format.fprintf fmt "%a -> %a [class=\"map\", %s]@."
             dotIdFrom (fromEvt.nodeId)
             dotIdTo (toEvt.nodeId)
             attributes) map
@@ -141,20 +142,20 @@ let dotDebugOfStrategy fmt strat =
         (fun nd -> NodeMap.find nd strat.st_game.g_esp.pol)
         strat.st_game.g_esp.evts ;
     dotedges "gm" "style=dashed" strat.st_game.g_esp.evts ;
-        
+
     Format.fprintf fmt "} subgraph cluster_strat {@.";
     dotverts "st" "" (fun x -> getPolarity x strat.st_strat)
         strat.st_strat.evts ;
     dotedges "st" "" strat.st_strat.evts ;
-   
+
     Format.fprintf fmt "}@.";
 
     mapEdges (formatNodeDotId "st")
         (formatNodeDotId "gm")
         "style=dotted, color=blue, arrowtail=tee, dir=both" strat.st_map ;
-    
+
     Format.fprintf fmt "}@."
-    
+
 let dispDot displayer x =
     let ch = Unix.open_process_out "dot -Tpng | feh -" in
     let fmt = Format.formatter_of_out_channel ch in

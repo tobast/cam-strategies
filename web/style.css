@@ -1,0 +1,53 @@
+body {
+	padding: 5px;
+}
+
+#content {
+	width: 35%;
+	float: left;
+}
+
+#result {
+	padding: 10px;
+	margin-left: 30px;
+	margin-right: 30px;
+	border-radius: 5px;
+	border: 1px solid black;
+	float: right;
+	width: 60%;
+}
+
+#examplesframe {
+	margin-top: 20px;
+}
+
+rect {
+    fill: rgb(255,255,255);
+    stroke-width:1;
+}
+g .label {
+	stroke-width: 0;
+	stroke: black;
+}
+
+.causality {
+  stroke: #333;
+  stroke-width: 1.5px;
+}
+
+.conflict {
+    stroke: #f00;
+  stroke-width: 1.5px;
+}
+
+.polpos {
+    stroke: green;
+}
+
+.polneg {
+    stroke: red;
+}
+
+pre { overflow: auto; }
+
+

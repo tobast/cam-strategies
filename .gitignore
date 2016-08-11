@@ -24,3 +24,4 @@ setup.log
 # Makefile configuration: selects the ocaml toplevel.
 ocamltop
 dispDot.sh
+web/web.js
