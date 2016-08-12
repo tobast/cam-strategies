@@ -7,8 +7,15 @@ let escapeHtml fmt str =
         | '\n' -> "<br/>"
         | c -> String.make 1 c) str
 
+let reducedEscape fmt str =
+    String.iter (fun chr -> Format.fprintf fmt "%s" @@ (match chr with
+        | '\n' -> "\\n"
+        | '"' -> "\\\""
+        | c -> String.make 1 c)) str
+
 let draw_graph g =
-    ignore @@ Js.Unsafe.eval_string (Printf.sprintf "drawDot (%S)" g)
+    let contents = (Format.asprintf "drawDot (\"%a\")" reducedEscape g) in
+    ignore @@ Js.Unsafe.eval_string contents
 
 let text d v =
     let x = Html.createSpan d in
@@ -54,8 +61,8 @@ let init _ =
                 Format.asprintf "%a" Printer.dotOfStrategy
                     LinearLambda.(LlamInterpret.stratOfTerm
                             @@ LlamHelpers.lambdaize @@ code) in
-            draw_graph dot;
-            errorbox##innerHTML <- Js.string ""
+            errorbox##innerHTML <- Js.string "" ;
+            draw_graph dot
         with e ->
             draw_graph "digraph {}";
             errorbox##innerHTML <- Js.string @@
