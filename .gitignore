@@ -25,3 +25,4 @@ setup.log
 ocamltop
 dispDot.sh
 web/web.js
+web/syntax.html

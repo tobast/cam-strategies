@@ -6,6 +6,8 @@ JS_OF_OCAML=js_of_ocaml
 OCBFLAGS=-use-ocamlfind
 
 WEBDIR=web/
+SYNTAX=syntax
+SYNTAX_GEN=syntax_gen.py
 TARGET=$(WEBDIR)web.js
 TARGET_DBG=main.d.byte
 TARGET_BYTE=main.byte
@@ -77,7 +79,7 @@ buildanyway_: ;
 
 clean:
 	$(OCB) -clean
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(WEBDIR)$(SYNTAX).html
 
 cleandoc:
 	rm -rf _build/$(DOCDIR)
@@ -91,6 +93,9 @@ toplevel: $(TARGET_BYTE)
 toplevel-llam: $(TARGET_BYTE)
 	$(OCAML) $(TL_INCLUDE_CMD) $(TL_LLAM_OPEN_CMD) $(TL_OBJS) $(OBJS)
 
-upload: $(TARGET)
+$(WEBDIR)$(SYNTAX).html: $(WEBDIR)$(SYNTAX_GEN)
+	$< > $@
+
+upload: $(TARGET) $(WEBDIR)$(SYNTAX).html
 	scp -r $(WEBDIR)* $(REMOTE):$(REMOTE_PATH)
 
