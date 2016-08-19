@@ -39,13 +39,18 @@ let checkbox where caption =
     inp
 
 
-let make_example textbox (caption, code) =
-    Dom.appendChild
-        (Dom_html.getElementById "examples")
-        (make_link caption (fun () -> textbox##value <- Js.string code));
-    Dom.appendChild
-        (Dom_html.getElementById "examples")
-        (text Dom_html.document " - ")
+let make_example =
+    let isFirst = ref true in
+    fun textbox (caption, code) ->
+        if !isFirst then
+            isFirst := false
+        else
+            Dom.appendChild
+                (Dom_html.getElementById "examples")
+                (text Dom_html.document " — ") ;
+        Dom.appendChild
+            (Dom_html.getElementById "examples")
+            (make_link caption (fun () -> textbox##value <- Js.string code))
 
 let init _ =
     let d = Html.document in
@@ -74,22 +79,24 @@ let init _ =
     inputbox_outcomes##value <- Js.string "Draw";
     textbox##className <- Js.string "codefont" ;
     textbox##rows <- 10; textbox##cols <- 50;
-    textbox##value <- Js.string "((\\x:P . x) 1) || 1";
+    textbox##value <- Js.string "((λx:P . x) 1) || 1";
     inputbox_outcomes##onclick <- Dom_html.handler do_outcomes;
     Dom.appendChild body textbox;
     Dom.appendChild body (text d "<br />");
     Dom.appendChild body inputbox_outcomes;
     List.iter (make_example textbox)
-    (* TODO: modify the examples *)
-        ["Sequential program.",
-         "x := 1; r <- x; x := r + 1";
-         "Simple race.",
-         "x := 1 || x := 2 || r <- x";
-         "Commuting read/writes.",
-         "r <- y; x := 1 || r' <- x; y := 1 ";
-         "Store buffering",
-         "x := 1; r <- x; r' <- y
-|| y := 1; s <- y; s' <- x"
+        ["simple parallel",
+            "1 || 1";
+         "function call",
+            "((λx:P . x) 1) || 1";
+         "synchronization",
+            "(ν[a]) [a]-1 || [~a]-1";
+         "deadlock",
+            "(ν[a]) [a]-[~a]-1";
+         "function",
+            "λp:P . λq:P . λr:P . (p || q) ; r" ;
+         "channels",
+            "λ[a]:C . λ[b]:C . λ[c]:C . ([a]-1 ; [b]-1) || [c]-1";
         ];
 
     Js._false

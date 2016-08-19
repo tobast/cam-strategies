@@ -1,9 +1,22 @@
+html,body,#result {
+	height: 100%;
+}
+
 body {
 	padding: 5px;
 }
 
 .codefont {
 	font-family: "consolas","sans-serif";
+}
+
+.obviouslink {
+	font-size: 1.2em;
+	text-align: center;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	padding-left: 8px;
+	padding-right: 8px;
 }
 
 #content {
