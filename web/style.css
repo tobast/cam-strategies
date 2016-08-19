@@ -2,6 +2,10 @@ body {
 	padding: 5px;
 }
 
+.codefont {
+	font-family: "consolas","sans-serif";
+}
+
 #content {
 	width: 35%;
 	float: left;

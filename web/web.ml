@@ -72,6 +72,7 @@ let init _ =
     in
 
     inputbox_outcomes##value <- Js.string "Draw";
+    textbox##className <- Js.string "codefont" ;
     textbox##rows <- 10; textbox##cols <- 50;
     textbox##value <- Js.string "((\\x:P . x) 1) || 1";
     inputbox_outcomes##onclick <- Dom_html.handler do_outcomes;
