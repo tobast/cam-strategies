@@ -270,7 +270,7 @@ let stratOfTerm term = Builder.(
         let rec seq curL fst last =
             if fst >= last
                 then curL
-                else seq (last::curL) fst (last-1)
+                else seq ((last-1)::curL) fst (last-1)
         in
         let holeySeq last ign =
             seq (seq [] (ign+1) last) 0 (ign-1) in
@@ -397,8 +397,9 @@ let stratOfTerm term = Builder.(
             (GVMap.remove (ChVar ch) env)
             nuChans term in
 
-        insertInEnvironment (chanStrat @@@ termStrat) (ChVar ch),
-            Format.sprintf "[%s] - %s" (nameOfVar (ChVar ch)) tName
+        let out = insertInEnvironment (chanStrat @@@ termStrat) (ChVar ch),
+            Format.sprintf "[%s] - %s" (nameOfVar (ChVar ch)) tName in
+        out
 
     | CcsNew(ch, term) ->
         let nuStrat =
