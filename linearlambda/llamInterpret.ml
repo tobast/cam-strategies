@@ -273,7 +273,7 @@ let stratOfTerm term = Builder.(
                 else seq ((last-1)::curL) fst (last-1)
         in
         let holeySeq last ign =
-            seq (seq [] (ign+1) last) 0 (ign-1) in
+            seq (seq [] (ign+1) last) 0 ign in
 
         let posInList v lst =
             let rec doSearch pos = function
