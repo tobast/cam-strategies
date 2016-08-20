@@ -97,6 +97,9 @@ let init _ =
             "λp:P . λq:P . λr:P . (p || q) ; r" ;
          "channels",
             "λ[a]:C . λ[b]:C . λ[c]:C . ([a]-1 ; [b]-1) || [c]-1";
+         "channels passing",
+            "(ν[f])(ν[g])([f]-1 || ((λ[a]:C . λ[b]:C . λ[c]:C . \
+            ([a]-1 ; [b]-1) || [c]-1)[~f][~g][g]))"
         ];
 
     Js._false
